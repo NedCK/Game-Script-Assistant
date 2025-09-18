@@ -133,7 +133,7 @@ function App() {
         />
 
         <main className="p-4 sm:p-6 lg:p-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             
             {/* Left Column: Generators & Characters */}
             <div className="lg:col-span-1 flex flex-col gap-6">
@@ -151,7 +151,7 @@ function App() {
             </div>
 
             {/* Right Column: Script Editor */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 lg:sticky lg:top-8">
               <ScriptEditor scriptPieces={scriptPieces} onClear={handleClearScript} />
             </div>
 
