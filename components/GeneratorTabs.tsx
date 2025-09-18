@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Character, GameEngine } from '../types';
+import { Character, GameEngine, FrameworkInputs } from '../types';
 import { CharacterGenerator } from './CharacterGenerator';
 import { SceneGenerator } from './SceneGenerator';
 import { FullScriptGenerator } from './FullScriptGenerator';
@@ -13,6 +13,7 @@ interface GeneratorTabsProps {
     onScriptGenerated: (content: string) => void;
     characters: Character[];
     gameEngine: GameEngine;
+    frameworkInputs: FrameworkInputs;
 }
 
 export const GeneratorTabs: React.FC<GeneratorTabsProps> = (props) => {
@@ -49,12 +50,14 @@ export const GeneratorTabs: React.FC<GeneratorTabsProps> = (props) => {
                     <CharacterGenerator
                         onCharacterGenerated={props.onCharacterGenerated}
                         gameEngine={props.gameEngine}
+                        frameworkInputs={props.frameworkInputs}
                     />
                 )}
                 {activeTab === 'scene' && (
                     <SceneGenerator
                         onSceneGenerated={props.onSceneGenerated}
                         gameEngine={props.gameEngine}
+                        frameworkInputs={props.frameworkInputs}
                     />
                 )}
                 {activeTab === 'fullScript' && (
@@ -62,6 +65,7 @@ export const GeneratorTabs: React.FC<GeneratorTabsProps> = (props) => {
                         characters={props.characters}
                         onScriptGenerated={props.onScriptGenerated}
                         gameEngine={props.gameEngine}
+                        frameworkInputs={props.frameworkInputs}
                     />
                 )}
             </div>

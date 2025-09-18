@@ -11,42 +11,65 @@ const characterSchema = {
   type: Type.OBJECT,
   properties: {
     name: { type: Type.STRING, description: 'The character\'s full name.' },
-    backstory: { type: Type.STRING, description: 'A detailed backstory for the character.' },
+    backstory: { type: Type.STRING, description: 'A detailed backstory for the character that aligns with the provided game design framework.' },
     personality: { 
       type: Type.ARRAY, 
       items: { type: Type.STRING },
       description: 'A list of key personality traits (e.g., "Brave", "Cynical").'
     },
-    appearance: { type: Type.STRING, description: 'A physical description of the character.' },
-    key_motivation: { type: Type.STRING, description: 'The character\'s primary goal or motivation.' }
+    appearance: { type: Type.STRING, description: 'A physical description of the character, fitting the game\'s art style.' },
+    key_motivation: { type: Type.STRING, description: 'The character\'s primary goal or motivation, rooted in the game\'s narrative.' }
   },
   required: ['name', 'backstory', 'personality', 'appearance', 'key_motivation']
 };
 
-export const generateCharacter = async (prompt: string, gameEngine: GameEngine): Promise<Character> => {
+const buildFrameworkContext = (frameworkInputs: FrameworkInputs): string => {
+  const context = (Object.keys(frameworkInputs) as Array<keyof FrameworkInputs>)
+    .filter(key => frameworkInputs[key].trim() !== '')
+    .map(key => `--- ${key.toUpperCase()} ---\n${frameworkInputs[key]}`)
+    .join('\n\n');
+  
+  return context.length > 0 ? `Here is the core Game Design Framework for context:\n${context}\n---` : 'No game design framework context was provided.';
+};
+
+export const generateCharacter = async (prompt: string, gameEngine: GameEngine, frameworkInputs: FrameworkInputs): Promise<Character> => {
   try {
+    const frameworkContext = buildFrameworkContext(frameworkInputs);
+    const fullPrompt = `You are an expert character designer for video games.
+Generate a detailed character profile for a game being developed in the ${gameEngine} engine.
+The character must align with the provided game design framework.
+
+${frameworkContext}
+
+The user's specific request for this character is: "${prompt}".`;
+    
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: `Generate a detailed character profile for a game being developed in the ${gameEngine} engine. The user wants: ${prompt}.`,
+      contents: fullPrompt,
       config: {
         responseMimeType: "application/json",
         responseSchema: characterSchema,
       },
     });
 
-    const jsonString = response.text;
-    if (!jsonString) {
+    const textResponse = response.text.trim();
+    if (!textResponse) {
         throw new Error('API returned an empty response.');
     }
-    return JSON.parse(jsonString) as Character;
+    
+    return JSON.parse(textResponse) as Character;
 
   } catch (error) {
     console.error("Error generating character:", error);
+     if (error instanceof SyntaxError) {
+      console.error("Failed to parse JSON response from AI:", error);
+      throw new Error("Failed to generate character profile. The AI returned an invalid format.");
+    }
     throw new Error("Failed to generate character profile. Please check the console for details.");
   }
 };
 
-export const generateScene = async (prompt: string, gameEngine: GameEngine): Promise<string> => {
+export const generateScene = async (prompt: string, gameEngine: GameEngine, frameworkInputs: FrameworkInputs): Promise<string> => {
   try {
      const engineSpecifics = {
         unity: "Include notes on potential particle effects or shaders that could be used in Unity.",
@@ -54,7 +77,14 @@ export const generateScene = async (prompt: string, gameEngine: GameEngine): Pro
         godot: "Keep in mind Godot's node-based structure, mentioning potential nodes (e.g., WorldEnvironment, Light3D) or scene setups that would achieve the described effect."
     };
 
-    const fullPrompt = `You are a world-class game script writer. Describe a scene for a video game being built with the ${gameEngine} engine. Focus on atmosphere, lighting, and key environmental details a player might interact with. ${engineSpecifics[gameEngine]} Format the output as a scene description in a screenplay.
+    const frameworkContext = buildFrameworkContext(frameworkInputs);
+
+    const fullPrompt = `You are a world-class game script writer. Describe a scene for a video game being built with the ${gameEngine} engine.
+The scene must be consistent with the provided game design framework. Focus on atmosphere, lighting, and key environmental details a player might interact with.
+${engineSpecifics[gameEngine]}
+Format the output as a scene description in a screenplay.
+
+${frameworkContext}
 
 Prompt: "${prompt}"`;
 
@@ -69,7 +99,7 @@ Prompt: "${prompt}"`;
   }
 };
 
-export const generateFullScript = async (prompt: string, characters: Character[], gameEngine: GameEngine): Promise<string> => {
+export const generateFullScript = async (prompt: string, characters: Character[], gameEngine: GameEngine, frameworkInputs: FrameworkInputs): Promise<string> => {
     try {
         const characterProfiles = characters.map(c => 
             `Name: ${c.name}\nPersonality: ${c.personality.join(', ')}\nMotivation: ${c.key_motivation}\nBackstory: ${c.backstory}`
@@ -80,10 +110,16 @@ export const generateFullScript = async (prompt: string, characters: Character[]
             unreal: "e.g., [UNREAL_CINEMATIC: TriggerSequence('Explosion_SEQ')], [SOUND: PlaySoundCue('Ambient_CaveDrips')]",
             godot: "e.g., [GODOT_SIGNAL: emit_signal('player_spoke')], [ANIMATION_PLAYER: play('character_wave')]"
         }
+        
+        const frameworkContext = buildFrameworkContext(frameworkInputs);
 
-        const fullPrompt = `You are a professional game scriptwriter. Create a complete game script scene for a game made in the ${gameEngine} engine. The scene should include scene descriptions, character actions, and dialogue. Format it like a professional screenplay. Where appropriate, include engine-specific cues for implementation (${engineSpecificCues[gameEngine]}).
+        const fullPrompt = `You are a professional game scriptwriter. Create a complete game script scene for a game made in the ${gameEngine} engine.
+The scene must adhere to the provided game design framework.
+It should include scene descriptions, character actions, and dialogue. Format it like a professional screenplay. Where appropriate, include engine-specific cues for implementation (${engineSpecificCues[gameEngine]}).
 
 Here is the context:
+
+${frameworkContext}
 
 ---
 CHARACTERS INVOLVED:

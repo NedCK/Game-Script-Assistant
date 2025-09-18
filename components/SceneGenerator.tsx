@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import { generateScene } from '../services/geminiService';
 import { LoadingSpinner } from './LoadingSpinner';
-import { GameEngine } from '../types';
+import { GameEngine, FrameworkInputs } from '../types';
 import { useI18n } from '../i18n/I18nProvider';
 
 
 interface SceneGeneratorProps {
   onSceneGenerated: (content: string) => void;
   gameEngine: GameEngine;
+  frameworkInputs: FrameworkInputs;
 }
 
-export const SceneGenerator: React.FC<SceneGeneratorProps> = ({ onSceneGenerated, gameEngine }) => {
+export const SceneGenerator: React.FC<SceneGeneratorProps> = ({ onSceneGenerated, gameEngine, frameworkInputs }) => {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +24,7 @@ export const SceneGenerator: React.FC<SceneGeneratorProps> = ({ onSceneGenerated
     setIsLoading(true);
     setError(null);
     try {
-      const sceneContent = await generateScene(prompt, gameEngine);
+      const sceneContent = await generateScene(prompt, gameEngine, frameworkInputs);
       onSceneGenerated(sceneContent);
       setPrompt('');
     } catch (err) {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { generateFullScript } from '../services/geminiService';
 import { LoadingSpinner } from './LoadingSpinner';
-import { Character, GameEngine } from '../types';
+import { Character, GameEngine, FrameworkInputs } from '../types';
 import { useI18n } from '../i18n/I18nProvider';
 
 
@@ -9,9 +9,10 @@ interface FullScriptGeneratorProps {
   characters: Character[];
   onScriptGenerated: (content: string) => void;
   gameEngine: GameEngine;
+  frameworkInputs: FrameworkInputs;
 }
 
-export const FullScriptGenerator: React.FC<FullScriptGeneratorProps> = ({ characters, onScriptGenerated, gameEngine }) => {
+export const FullScriptGenerator: React.FC<FullScriptGeneratorProps> = ({ characters, onScriptGenerated, gameEngine, frameworkInputs }) => {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +25,7 @@ export const FullScriptGenerator: React.FC<FullScriptGeneratorProps> = ({ charac
     setIsLoading(true);
     setError(null);
     try {
-      const scriptContent = await generateFullScript(prompt, characters, gameEngine);
+      const scriptContent = await generateFullScript(prompt, characters, gameEngine, frameworkInputs);
       onScriptGenerated(scriptContent);
       setPrompt('');
     } catch (err) {

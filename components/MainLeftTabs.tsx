@@ -59,6 +59,7 @@ export const MainLeftTabs: React.FC<MainLeftTabsProps> = (props) => {
                             onScriptGenerated={props.onScriptGenerated}
                             characters={props.characters}
                             gameEngine={props.gameEngine}
+                            frameworkInputs={props.frameworkInputs}
                         />
                     </div>
                 )}

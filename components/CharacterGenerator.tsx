@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { generateCharacter } from '../services/geminiService';
-import { Character, GameEngine } from '../types';
+import { Character, GameEngine, FrameworkInputs } from '../types';
 import { LoadingSpinner } from './LoadingSpinner';
 import { useI18n } from '../i18n/I18nProvider';
 
 interface CharacterGeneratorProps {
   onCharacterGenerated: (character: Character) => void;
   gameEngine: GameEngine;
+  frameworkInputs: FrameworkInputs;
 }
 
-export const CharacterGenerator: React.FC<CharacterGeneratorProps> = ({ onCharacterGenerated, gameEngine }) => {
+export const CharacterGenerator: React.FC<CharacterGeneratorProps> = ({ onCharacterGenerated, gameEngine, frameworkInputs }) => {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +23,7 @@ export const CharacterGenerator: React.FC<CharacterGeneratorProps> = ({ onCharac
     setIsLoading(true);
     setError(null);
     try {
-      const newCharacter = await generateCharacter(prompt, gameEngine);
+      const newCharacter = await generateCharacter(prompt, gameEngine, frameworkInputs);
       onCharacterGenerated(newCharacter);
       setPrompt('');
     } catch (err) {
