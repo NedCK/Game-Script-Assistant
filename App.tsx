@@ -25,14 +25,14 @@ function App() {
   const [scriptPieces, setScriptPieces] = useState<ScriptPiece[]>([]);
   const [gameEngine, setGameEngine] = useState<GameEngine>('unity');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [language, setLanguage] = useState<'en' | 'zh'>('en');
-  const [projectName, setProjectName] = useState('My Awesome Game');
+  const [language, setLanguage] = useState<'en' | 'zh'>('zh');
+  const [projectName, setProjectName] = useState('我的超棒游戏');
   const [frameworkInputs, setFrameworkInputs] = useState<FrameworkInputs>(initialFrameworkInputs);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleCharacterGenerated = useCallback((character: Character) => {
     setCharacters(prev => [...prev, character]);
-    const content = `CHARACTER PROFILE\nName: ${character.name}\nBackstory: ${character.backstory}\nPersonality: ${character.personality.join(', ')}\nAppearance: ${character.appearance}\nMotivation: ${character.key_motivation}`;
+    const content = `角色简介\n姓名: ${character.name}\n背景故事: ${character.backstory}\n性格: ${character.personality.join(', ')}\n外貌: ${character.appearance}\n核心动机: ${character.key_motivation}`;
     setScriptPieces(prev => [...prev, { id: Date.now(), type: 'scene', content }]);
   }, []);
 
