@@ -111,7 +111,7 @@ const outlineSchema = {
  */
 const summarizeFramework = async (fullContext: FrameworkInputs): Promise<string> => {
     const contextString = (Object.keys(fullContext) as Array<keyof FrameworkInputs>)
-      .filter(key => fullContext[key].trim() !== '')
+      .filter(key => fullContext[key] && fullContext[key].trim() !== '')
       .map(key => `--- ${key.toUpperCase()} ---\n${fullContext[key]}`)
       .join('\n\n');
       
@@ -332,22 +332,40 @@ export const brainstormFrameworkIdea = async (
   fullContext: FrameworkInputs
 ): Promise<string> => {
   try {
-    const summaryContext = await summarizeFramework(fullContext);
+    // 1. Isolate the context from other sections into a new object.
+    const otherSectionsContext: Partial<FrameworkInputs> = {};
+    (Object.keys(fullContext) as Array<keyof FrameworkInputs>).forEach(key => {
+      if (key !== section && fullContext[key]?.trim() !== '') {
+        otherSectionsContext[key] = fullContext[key];
+      }
+    });
 
-    const prompt = `You are a senior game design consultant and creative partner. A designer is working on a new game concept and needs help brainstorming for the "${section}" section of their design document.
+    // 2. Conditionally build the context block for the prompt.
+    let contextBlock = '';
+    const hasOtherContext = Object.keys(otherSectionsContext).length > 0;
 
-Here is a summary of their overall game concept:
---- GAME CONCEPT SUMMARY ---
-${summaryContext}
----
+    if (hasOtherContext) {
+        // Summarize that context if it exists to ensure the payload is small.
+        const contextSummary = await summarizeFramework(otherSectionsContext as FrameworkInputs);
+        contextBlock = `
+
+Here is a summary of the context from other sections of their design document:
+--- CONTEXT SUMMARY ---
+${contextSummary}
+---`;
+    }
+    
+    // 3. Build the final prompt. If contextBlock is empty, it's simply omitted.
+    const prompt = `You are a senior game design consultant and creative partner. A designer is working on a new game concept and needs help brainstorming for the "${section}" section of their design document.${contextBlock}
 
 Here are their current notes for the "${section}" section they are working on:
 --- CURRENT "${section.toUpperCase()}" NOTES ---
 ${currentText.trim().length > 0 ? currentText : "No notes yet."}
 ---
 
-Based on all of this, provide a few creative, inspiring, and actionable ideas to help them expand on the "${section}" of their game. Frame your response as a helpful brainstorming partner. Append your ideas to their existing notes. Do not repeat their existing notes in your response.`;
+Based on all of this, provide a few creative, inspiring, and actionable ideas to help them expand on the "${section}" of their game. Frame your response as a helpful brainstorming partner. Append your ideas to their existing notes. Do not repeat their existing notes in your response. Your suggestions should be fresh and build upon what's already there.`;
 
+    // 4. Make the final API call for brainstorming.
     const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
