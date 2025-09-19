@@ -7,7 +7,7 @@ import { I18nProvider } from './i18n/I18nProvider';
 import { Character, ScriptPiece, GameEngine, FrameworkInputs, SavedProject, SaveStatus } from './types';
 import { ScriptEditor } from './components/ScriptEditor';
 import { MainLeftTabs } from './components/MainLeftTabs';
-import { translateToChinese } from './services/geminiService';
+import { translateToChinese, updateApiKey } from './services/geminiService';
 
 const initialFrameworkInputs: FrameworkInputs = {
   theme: '',
@@ -43,8 +43,21 @@ function App() {
   const [frameworkInputs, setFrameworkInputs] = useState<FrameworkInputs>(initialFrameworkInputs);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [customApiKey, setCustomApiKey] = useState<string>(() => sessionStorage.getItem('customApiKey') || '');
+
 
   const isInitialLoad = useRef(true);
+
+  // Effect to update the API key in the service when it changes
+  useEffect(() => {
+    updateApiKey(customApiKey);
+    if (customApiKey) {
+      sessionStorage.setItem('customApiKey', customApiKey);
+    } else {
+      sessionStorage.removeItem('customApiKey');
+    }
+  }, [customApiKey]);
+
 
   const loadProjectData = (data: SavedProject) => {
       if (data.version > APP_VERSION) {
@@ -294,6 +307,9 @@ function App() {
           onClose={() => setIsSettingsOpen(false)}
           gameEngine={gameEngine}
           onGameEngineChange={setGameEngine}
+          customApiKey={customApiKey}
+          onCustomApiKeyChange={setCustomApiKey}
+          appVersion={APP_VERSION.toString()}
         />
       </div>
     </I18nProvider>

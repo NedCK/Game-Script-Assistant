@@ -7,6 +7,9 @@ interface SettingsModalProps {
   onClose: () => void;
   gameEngine: GameEngine;
   onGameEngineChange: (engine: GameEngine) => void;
+  customApiKey: string;
+  onCustomApiKeyChange: (key: string) => void;
+  appVersion: string;
 }
 
 const XMarkIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -20,6 +23,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   gameEngine,
   onGameEngineChange,
+  customApiKey,
+  onCustomApiKeyChange,
+  appVersion,
 }) => {
   const { t } = useI18n();
 
@@ -60,6 +66,42 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <option value="godot">Godot</option>
             </select>
             <p className="text-xs text-gray-500 mt-1">{t('settingsGameEngineDescription')}</p>
+          </div>
+          
+          {/* API Key Setting */}
+          <div className="border-t border-gray-700 pt-6">
+            <h3 className="text-lg font-semibold text-gray-200 mb-2">{t('settingsApiKeyTitle')}</h3>
+            <label htmlFor="apiKey" className="block text-sm font-medium text-gray-300 mb-2">
+              {t('settingsApiKeyLabel')}
+            </label>
+            <input
+              id="apiKey"
+              type="password"
+              value={customApiKey}
+              onChange={(e) => onCustomApiKeyChange(e.target.value)}
+              placeholder={t('settingsApiKeyPlaceholder')}
+              className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition"
+            />
+            <p className="text-xs text-gray-500 mt-1">{t('settingsApiKeyDescription')}</p>
+          </div>
+
+          {/* About this App Section */}
+          <div className="border-t border-gray-700 pt-6">
+            <h3 className="text-lg font-semibold text-gray-200 mb-3">{t('settingsAboutTitle')}</h3>
+            <div className="space-y-2 text-sm text-gray-400">
+               <p>{t('settingsAboutDesc')}</p>
+               <p>
+                   {t('settingsAboutVersion')}: {appVersion} —{' '}
+                   <a 
+                       href="https://ai.google.dev/" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       className="text-teal-400 hover:text-teal-300 underline"
+                   >
+                       {t('settingsAboutLink')}
+                   </a>
+               </p>
+            </div>
           </div>
 
           {/* How to Use Section */}

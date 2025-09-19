@@ -6,7 +6,25 @@ if (!process.env.API_KEY) {
   throw new Error("API_KEY environment variable not set");
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Initialize with the default key, but allow it to be changed.
+let ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+/**
+ * Re-initializes the AI client with a new API key.
+ * If the provided key is empty, it reverts to the default environment variable key.
+ * @param newApiKey The new API key to use.
+ */
+export const updateApiKey = (newApiKey?: string | null) => {
+  const keyToUse = newApiKey || process.env.API_KEY;
+  if (!keyToUse) {
+    console.error("Attempted to set an empty API key with no fallback environment variable.");
+    return;
+  }
+  
+  // Re-create the client instance with the new or default key.
+  ai = new GoogleGenAI({ apiKey: keyToUse });
+};
+
 
 /**
  * A utility function to retry an async operation with exponential backoff.
