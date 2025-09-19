@@ -9,6 +9,7 @@ type ActiveTab = 'design' | 'content';
 interface MainLeftTabsProps {
     frameworkInputs: FrameworkInputs;
     onFrameworkChange: (section: keyof FrameworkInputs, value: string) => void;
+    onTranslateFrameworkSection: (section: keyof FrameworkInputs) => Promise<void>;
     onCharacterGenerated: (character: Character) => void;
     onSceneGenerated: (content: string) => void;
     onScriptGenerated: (content: string) => void;
@@ -49,6 +50,7 @@ export const MainLeftTabs: React.FC<MainLeftTabsProps> = (props) => {
                     <GameDesignFramework
                         inputs={props.frameworkInputs}
                         onInputChange={props.onFrameworkChange}
+                        onTranslateSection={props.onTranslateFrameworkSection}
                     />
                 )}
                 {activeTab === 'content' && (

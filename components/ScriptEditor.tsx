@@ -5,6 +5,7 @@ import { useI18n } from '../i18n/I18nProvider';
 interface ScriptEditorProps {
   scriptPieces: ScriptPiece[];
   onClear: () => void;
+  onTranslate: (pieceId: number) => Promise<void>;
 }
 
 const CopyIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -25,9 +26,16 @@ const CheckIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
+const LanguageIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 21l5.25-11.25L21 21m-9-3.75h.008v.008H12v-.008ZM8.25 7.5l3 3m0 0l3-3m-3 3v-3m-3.375 9.75L3 12m0 0l3.375-3.75M3 12h18" />
+  </svg>
+);
 
-export const ScriptEditor: React.FC<ScriptEditorProps> = ({ scriptPieces, onClear }) => {
+
+export const ScriptEditor: React.FC<ScriptEditorProps> = ({ scriptPieces, onClear, onTranslate }) => {
   const [copied, setCopied] = useState(false);
+  const [translatingPieceId, setTranslatingPieceId] = useState<number | null>(null);
   const { t } = useI18n();
 
   const handleCopy = () => {
@@ -35,6 +43,16 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({ scriptPieces, onClea
     navigator.clipboard.writeText(fullScript);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleTranslate = async (pieceId: number) => {
+    if (translatingPieceId) return;
+    setTranslatingPieceId(pieceId);
+    try {
+      await onTranslate(pieceId);
+    } finally {
+      setTranslatingPieceId(null);
+    }
   };
   
   return (
@@ -69,8 +87,20 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({ scriptPieces, onClea
         ) : (
           <div className="prose prose-invert prose-p:text-gray-300 prose-headings:text-gray-100 max-w-none space-y-4">
             {scriptPieces.map(piece => (
-              <div key={piece.id} className="whitespace-pre-wrap p-4 bg-gray-900/50 rounded-lg">
-                {piece.content}
+              <div key={piece.id} className="group relative">
+                <div className="whitespace-pre-wrap p-4 bg-gray-900/50 rounded-lg">
+                  {piece.content}
+                </div>
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button 
+                    onClick={() => handleTranslate(piece.id)}
+                    className="bg-gray-700 hover:bg-sky-600 text-gray-300 hover:text-white p-2 rounded-md transition-colors flex items-center justify-center h-8 w-8"
+                    title={t('translatePieceButton')}
+                    disabled={translatingPieceId !== null}
+                  >
+                    {translatingPieceId === piece.id ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : <LanguageIcon className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
             ))}
           </div>

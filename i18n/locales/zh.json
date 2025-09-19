@@ -66,5 +66,8 @@
   "settingsHowToUseStep3Title": "3. 组合您的剧本",
   "settingsHowToUseStep3Desc": "所有生成的内容都会显示在右侧的“剧本画布”中。您可以复制完整剧本或将其清除以重新开始。",
   "settingsHowToUseStep4Title": "4. 保存和加载您的进度",
-  "settingsHowToUseStep4Desc": "使用标题栏中的“保存项目”和“加载项目”按钮将您的整个工作区保存到文件中，并在以后加载回来。"
+  "settingsHowToUseStep4Desc": "使用标题栏中的“保存项目”和“加载项目”按钮将您的整个工作区保存到文件中，并在以后加载回来。",
+  "translatePieceButton": "翻译为中文",
+  "translateOutlineButton": "翻译大纲",
+  "translateButton": "翻译"
 }

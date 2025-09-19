@@ -288,3 +288,28 @@ Based on all of this, provide a few creative, inspiring, and actionable ideas to
     throw new Error(`Failed to brainstorm ideas for ${section}.`);
   }
 };
+
+export const translateToChinese = async (textToTranslate: string): Promise<string> => {
+  if (!textToTranslate?.trim()) {
+    return '';
+  }
+  try {
+    const prompt = `You are an expert translator. Your task is to translate the following English text into Simplified Chinese.
+- Preserve the original formatting (e.g., markdown, screenplay format, JSON structure).
+- Do not add any extra commentary, explanations, or introductory phrases like "Here is the translation:".
+- Provide only the direct translation.
+
+--- TEXT TO TRANSLATE ---
+${textToTranslate}
+--- END OF TEXT ---`;
+
+    const response = await withRetry(() => ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    }));
+    return response.text;
+  } catch (error) {
+    console.error("Error translating to Chinese:", error);
+    throw new Error("Failed to translate the text to Chinese.");
+  }
+};

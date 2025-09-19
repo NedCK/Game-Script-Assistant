@@ -7,6 +7,7 @@ import { I18nProvider } from './i18n/I18nProvider';
 import { Character, ScriptPiece, GameEngine, FrameworkInputs, SavedProject } from './types';
 import { ScriptEditor } from './components/ScriptEditor';
 import { MainLeftTabs } from './components/MainLeftTabs';
+import { translateToChinese } from './services/geminiService';
 
 const initialFrameworkInputs: FrameworkInputs = {
   theme: '',
@@ -113,6 +114,39 @@ function App() {
     reader.readAsText(file);
   };
 
+  const handleTranslateScriptPiece = useCallback(async (pieceId: number) => {
+    const pieceToTranslate = scriptPieces.find(p => p.id === pieceId);
+    if (!pieceToTranslate) return;
+
+    try {
+      const translatedContent = await translateToChinese(pieceToTranslate.content);
+      setScriptPieces(prevPieces => 
+        prevPieces.map(p => 
+          p.id === pieceId ? { ...p, content: translatedContent } : p
+        )
+      );
+    } catch (error) {
+      console.error("Failed to translate script piece:", error);
+      alert(error instanceof Error ? error.message : "An unknown translation error occurred.");
+      throw error;
+    }
+  }, [scriptPieces]);
+
+  const handleTranslateFrameworkSection = useCallback(async (section: keyof FrameworkInputs) => {
+    const textToTranslate = frameworkInputs[section];
+    if (!textToTranslate.trim()) return;
+
+    try {
+        const translatedText = await translateToChinese(textToTranslate);
+        setFrameworkInputs(prev => ({ ...prev, [section]: translatedText }));
+    } catch (error) {
+        console.error(`Failed to translate framework section ${section}:`, error);
+        // Re-throw to allow the child component to handle its own UI state and error display
+        throw error;
+    }
+  }, [frameworkInputs]);
+
+
   return (
     <I18nProvider language={language}>
       <div className="bg-gray-900 text-white min-h-screen font-sans">
@@ -141,6 +175,7 @@ function App() {
               <MainLeftTabs
                 frameworkInputs={frameworkInputs}
                 onFrameworkChange={handleFrameworkChange}
+                onTranslateFrameworkSection={handleTranslateFrameworkSection}
                 onCharacterGenerated={handleCharacterGenerated}
                 onSceneGenerated={handleSceneGenerated}
                 onScriptGenerated={handleScriptGenerated}
@@ -152,7 +187,11 @@ function App() {
 
             {/* Right Column: Script Editor */}
             <div className="lg:col-span-2 lg:sticky lg:top-8">
-              <ScriptEditor scriptPieces={scriptPieces} onClear={handleClearScript} />
+              <ScriptEditor 
+                scriptPieces={scriptPieces} 
+                onClear={handleClearScript}
+                onTranslate={handleTranslateScriptPiece}
+              />
             </div>
 
           </div>

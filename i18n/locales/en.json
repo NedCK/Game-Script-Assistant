@@ -66,5 +66,8 @@
   "settingsHowToUseStep3Title": "3. Assemble Your Script",
   "settingsHowToUseStep3Desc": "All generated content appears in the 'Script Canvas' on the right. You can copy the full script or clear it to start over.",
   "settingsHowToUseStep4Title": "4. Save & Load Your Progress",
-  "settingsHowToUseStep4Desc": "Use the 'Save Project' and 'Load Project' buttons in the header to save your entire workspace to a file and load it back later."
+  "settingsHowToUseStep4Desc": "Use the 'Save Project' and 'Load Project' buttons in the header to save your entire workspace to a file and load it back later.",
+  "translatePieceButton": "Translate to Chinese",
+  "translateOutlineButton": "Translate Outline",
+  "translateButton": "Translate"
 }

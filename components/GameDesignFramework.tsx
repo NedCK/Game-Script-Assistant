@@ -7,6 +7,7 @@ import { LoadingSpinner } from './LoadingSpinner';
 interface GameDesignFrameworkProps {
     inputs: FrameworkInputs;
     onInputChange: (section: keyof FrameworkInputs, value: string) => void;
+    onTranslateSection: (section: keyof FrameworkInputs) => Promise<void>;
 }
 
 const ChevronDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -17,10 +18,11 @@ const ChevronDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 
 type FrameworkSection = keyof FrameworkInputs;
 
-export const GameDesignFramework: React.FC<GameDesignFrameworkProps> = ({ inputs, onInputChange }) => {
+export const GameDesignFramework: React.FC<GameDesignFrameworkProps> = ({ inputs, onInputChange, onTranslateSection }) => {
     const { t } = useI18n();
     const [openSection, setOpenSection] = useState<FrameworkSection>('theme');
     const [loadingSection, setLoadingSection] = useState<FrameworkSection | null>(null);
+    const [translatingSection, setTranslatingSection] = useState<FrameworkSection | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const frameworkSections: { id: FrameworkSection; title: string; desc: string }[] = [
@@ -47,6 +49,20 @@ export const GameDesignFramework: React.FC<GameDesignFrameworkProps> = ({ inputs
         }
     }, [inputs, onInputChange]);
 
+    const handleTranslate = useCallback(async (section: FrameworkSection) => {
+        if (loadingSection || translatingSection) return;
+        setTranslatingSection(section);
+        setError(null);
+        try {
+            await onTranslateSection(section);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'An unknown error occurred during translation.');
+        } finally {
+            setTranslatingSection(null);
+        }
+    }, [onTranslateSection, loadingSection, translatingSection]);
+
+
     return (
         <div className="p-6 space-y-2">
             {error && <p className="text-red-400 bg-red-900/50 p-3 rounded-md text-sm mb-4">{error}</p>}
@@ -71,13 +87,22 @@ export const GameDesignFramework: React.FC<GameDesignFrameworkProps> = ({ inputs
                                 className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition mb-2 h-36 resize-y"
                                 placeholder={`Outline your ideas for ${id}...`}
                             />
-                             <button
-                                onClick={() => handleBrainstorm(id)}
-                                className="w-full bg-teal-800/80 hover:bg-teal-700/80 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center disabled:bg-gray-600 text-sm"
-                                disabled={loadingSection !== null}
-                            >
-                                {loadingSection === id ? <LoadingSpinner /> : '✨ ' + t('brainstormButton')}
-                            </button>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => handleBrainstorm(id)}
+                                    className="flex-1 bg-teal-800/80 hover:bg-teal-700/80 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center disabled:bg-gray-600 text-sm"
+                                    disabled={loadingSection !== null || translatingSection !== null}
+                                >
+                                    {loadingSection === id ? <LoadingSpinner /> : '✨ ' + t('brainstormButton')}
+                                </button>
+                                <button
+                                    onClick={() => handleTranslate(id)}
+                                    className="flex-1 bg-sky-800/80 hover:bg-sky-700/80 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center disabled:bg-gray-600 text-sm"
+                                    disabled={loadingSection !== null || translatingSection !== null || !inputs[id].trim()}
+                                >
+                                    {translatingSection === id ? <LoadingSpinner /> : t('translateButton')}
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { generateScriptOutline, generateScriptSection } from '../services/geminiService';
+import { generateScriptOutline, generateScriptSection, translateToChinese } from '../services/geminiService';
 import { LoadingSpinner } from './LoadingSpinner';
 import { Character, GameEngine, FrameworkInputs } from '../types';
 import { useI18n } from '../i18n/I18nProvider';
@@ -21,6 +21,7 @@ export const FullScriptGenerator: React.FC<FullScriptGeneratorProps> = ({ charac
   const [prompt, setPrompt] = useState('');
   const [outline, setOutline] = useState<OutlineItem[]>([]);
   const [isLoadingOutline, setIsLoadingOutline] = useState(false);
+  const [isTranslatingOutline, setIsTranslatingOutline] = useState(false);
   const [generatingSectionId, setGeneratingSectionId] = useState<number | null>(null);
   const [generatedSectionIds, setGeneratedSectionIds] = useState<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +80,35 @@ export const FullScriptGenerator: React.FC<FullScriptGeneratorProps> = ({ charac
     setGeneratedSectionIds(new Set());
   };
 
+  const handleTranslateOutline = async () => {
+    if (outline.length === 0 || isTranslatingOutline) return;
+
+    setIsTranslatingOutline(true);
+    setError(null);
+    const separator = '\n|||TRANSLATION_SEPARATOR|||\n';
+    
+    try {
+        const descriptions = outline.map(item => item.description);
+        const joinedText = descriptions.join(separator);
+        const translatedJoinedText = await translateToChinese(joinedText);
+        const translatedDescriptions = translatedJoinedText.split(separator);
+
+        if (translatedDescriptions.length === descriptions.length) {
+            setOutline(prev => prev.map((item, index) => ({
+                ...item,
+                description: translatedDescriptions[index] || item.description
+            })));
+        } else {
+            throw new Error("Translation returned a different number of sections. Please try again.");
+        }
+
+    } catch (err) {
+         setError(err instanceof Error ? err.message : 'An unknown error occurred during translation.');
+    } finally {
+        setIsTranslatingOutline(false);
+    }
+  };
+
   if (outline.length > 0) {
       return (
           <div>
@@ -87,12 +117,21 @@ export const FullScriptGenerator: React.FC<FullScriptGeneratorProps> = ({ charac
                   <h3 className="text-lg font-semibold text-gray-200">{t('scriptOutlineTitle')}</h3>
                   <p className="text-sm text-gray-400">{t('scriptOutlineSubtitle')}</p>
                 </div>
-                <button 
-                  onClick={handleClearOutline}
-                  className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-3 rounded-md text-xs transition-colors"
-                >
-                  {t('clearOutlineButton')}
-                </button>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={handleTranslateOutline}
+                        className="bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 px-3 rounded-md text-xs transition-colors flex items-center justify-center disabled:bg-gray-500 w-28"
+                        disabled={isTranslatingOutline}
+                    >
+                        {isTranslatingOutline ? <LoadingSpinner /> : t('translateOutlineButton')}
+                    </button>
+                    <button 
+                    onClick={handleClearOutline}
+                    className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-3 rounded-md text-xs transition-colors"
+                    >
+                    {t('clearOutlineButton')}
+                    </button>
+                </div>
               </div>
 
               <div className="space-y-4">
