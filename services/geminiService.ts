@@ -289,6 +289,37 @@ Generate the screenplay for this specific section now.`;
     }
 }
 
+/**
+ * NEW: Summarizes the entire framework into a concise paragraph.
+ * This is used to create a smaller, more efficient context for brainstorming.
+ */
+const summarizeFramework = async (fullContext: FrameworkInputs): Promise<string> => {
+    const contextString = (Object.keys(fullContext) as Array<keyof FrameworkInputs>)
+      .filter(key => fullContext[key].trim() !== '')
+      .map(key => `--- ${key.toUpperCase()} ---\n${fullContext[key]}`)
+      .join('\n\n');
+      
+    if (!contextString.trim()) {
+      return "No game design context was provided.";
+    }
+
+    const prompt = `You are a game design expert. Read the following game design document sections and summarize the core concept of the game into a concise, 2-3 sentence paragraph.
+
+--- DOCUMENT ---
+${contextString}
+--- END DOCUMENT ---
+
+Summarize the core concept now.`;
+    
+    const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+        config: { safetySettings },
+    }));
+
+    return response.text;
+};
+
 
 export const brainstormFrameworkIdea = async (
   section: keyof FrameworkInputs,
@@ -296,16 +327,15 @@ export const brainstormFrameworkIdea = async (
   fullContext: FrameworkInputs
 ): Promise<string> => {
   try {
-    // Build a string of the context from other fields
-    const contextString = (Object.keys(fullContext) as Array<keyof FrameworkInputs>)
-      .filter(key => key !== section && fullContext[key].trim() !== '')
-      .map(key => `--- ${key.toUpperCase()} ---\n${fullContext[key]}`)
-      .join('\n\n');
+    // REFACTORED: Instead of sending all raw context, generate a summary first.
+    const summaryContext = await summarizeFramework(fullContext);
 
     const prompt = `You are a senior game design consultant and creative partner. A designer is working on a new game concept and needs help brainstorming for the "${section}" section of their design document.
 
-Here is the context from the rest of their design document:
-${contextString.length > 0 ? contextString : "No other context provided yet."}
+Here is a summary of their overall game concept:
+--- GAME CONCEPT SUMMARY ---
+${summaryContext}
+---
 
 Here are their current notes for the "${section}" section they are working on:
 --- CURRENT "${section.toUpperCase()}" NOTES ---
