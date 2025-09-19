@@ -1,10 +1,10 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { CharacterList } from './components/CharacterList';
 import { Header } from './components/Header';
 import { SettingsModal } from './components/SettingsModal';
 import { ProjectManager } from './components/ProjectManager';
 import { I18nProvider } from './i18n/I18nProvider';
-import { Character, ScriptPiece, GameEngine, FrameworkInputs, SavedProject } from './types';
+import { Character, ScriptPiece, GameEngine, FrameworkInputs, SavedProject, SaveStatus } from './types';
 import { ScriptEditor } from './components/ScriptEditor';
 import { MainLeftTabs } from './components/MainLeftTabs';
 import { translateToChinese } from './services/geminiService';
@@ -20,6 +20,18 @@ const initialFrameworkInputs: FrameworkInputs = {
 };
 
 const APP_VERSION = 1;
+const LOCAL_STORAGE_KEY = 'gameScriptProject';
+
+const getInitialState = (): SavedProject => ({
+  version: APP_VERSION,
+  projectName: 'My Awesome Game',
+  frameworkInputs: initialFrameworkInputs,
+  characters: [],
+  scriptPieces: [],
+  gameEngine: 'unity',
+  language: 'en',
+});
+
 
 function App() {
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -29,7 +41,75 @@ function App() {
   const [language, setLanguage] = useState<'en' | 'zh'>('zh');
   const [projectName, setProjectName] = useState('我的超棒游戏');
   const [frameworkInputs, setFrameworkInputs] = useState<FrameworkInputs>(initialFrameworkInputs);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isInitialLoad = useRef(true);
+
+  const loadProjectData = (data: SavedProject) => {
+      if (data.version > APP_VERSION) {
+        throw new Error("This project file was created with a newer version of the app and cannot be loaded.");
+      }
+
+      // Future: Add migration logic here if data.version < APP_VERSION
+
+      setProjectName(data.projectName);
+      setFrameworkInputs(data.frameworkInputs);
+      setCharacters(data.characters || []);
+      setScriptPieces(data.scriptPieces || []);
+      setGameEngine(data.gameEngine || 'unity');
+      setLanguage(data.language || 'en');
+  };
+
+  // Auto-load from localStorage on initial mount
+  useEffect(() => {
+    try {
+      const savedDataString = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedDataString) {
+        const savedData: SavedProject = JSON.parse(savedDataString);
+        loadProjectData(savedData);
+        console.log('Project loaded from local storage.');
+      }
+    } catch (error) {
+      console.error("Failed to load project from local storage:", error);
+      // Clear corrupted data
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
+    }
+  }, []);
+
+  // Auto-save to localStorage on state change (with debounce)
+  useEffect(() => {
+    if (isInitialLoad.current) {
+        isInitialLoad.current = false;
+        return;
+    }
+
+    setSaveStatus('unsaved');
+    
+    const handler = setTimeout(() => {
+        setSaveStatus('saving');
+        const projectData: SavedProject = {
+            version: APP_VERSION,
+            projectName,
+            frameworkInputs,
+            characters,
+            scriptPieces,
+            gameEngine,
+            language,
+        };
+        try {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(projectData));
+            setTimeout(() => setSaveStatus('saved'), 500); // Give feedback
+        } catch (error) {
+            console.error("Failed to save project to local storage:", error);
+            setSaveStatus('unsaved'); // Revert status on failure
+        }
+    }, 1500);
+
+    return () => {
+        clearTimeout(handler);
+    };
+  }, [projectName, frameworkInputs, characters, scriptPieces, gameEngine, language]);
 
   const handleCharacterGenerated = useCallback((character: Character) => {
     setCharacters(prev => [...prev, character]);
@@ -73,6 +153,11 @@ function App() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    
+    // Also ensure local storage is up-to-date and status is saved
+    localStorage.setItem(LOCAL_STORAGE_KEY, jsonString);
+    setSaveStatus('saved');
+
   }, [projectName, frameworkInputs, characters, scriptPieces, gameEngine, language]);
 
   const handleLoadProjectTrigger = () => {
@@ -91,16 +176,12 @@ function App() {
         
         const data: SavedProject = JSON.parse(text);
 
-        if (data.version !== APP_VERSION || !data.projectName || !data.frameworkInputs) {
-          throw new Error("Invalid or incompatible project file.");
-        }
+        loadProjectData(data);
+        
+        // Also save the newly loaded project to local storage
+        localStorage.setItem(LOCAL_STORAGE_KEY, text);
+        setSaveStatus('saved');
 
-        setProjectName(data.projectName);
-        setFrameworkInputs(data.frameworkInputs);
-        setCharacters(data.characters || []);
-        setScriptPieces(data.scriptPieces || []);
-        setGameEngine(data.gameEngine || 'unity');
-        setLanguage(data.language || 'en');
         alert('Project loaded successfully!');
 
       } catch (error) {
@@ -113,6 +194,15 @@ function App() {
     };
     reader.readAsText(file);
   };
+
+  const handleNewProject = useCallback(() => {
+    if (window.confirm("Are you sure you want to start a new project? Any unsaved changes will be lost.")) {
+      const initialState = getInitialState();
+      loadProjectData(initialState);
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
+      setSaveStatus('saved');
+    }
+  }, []);
 
   const handleTranslateScriptPiece = useCallback(async (pieceId: number) => {
     const pieceToTranslate = scriptPieces.find(p => p.id === pieceId);
@@ -157,6 +247,8 @@ function App() {
           onLanguageChange={setLanguage}
           onSave={handleSaveProject}
           onLoad={handleLoadProjectTrigger}
+          onNewProject={handleNewProject}
+          saveStatus={saveStatus}
         />
         <input 
           type="file" 

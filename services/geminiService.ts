@@ -1,4 +1,5 @@
-import { GoogleGenAI, Type } from "@google/genai";
+// FIX: Import GenerateContentResponse to correctly type API call results.
+import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { Character, GameEngine, FrameworkInputs } from '../types';
 
 if (!process.env.API_KEY) {
@@ -88,7 +89,8 @@ ${frameworkContext}
 
 The user's specific request for this character is: "${prompt}".`;
     
-    const response = await withRetry(() => ai.models.generateContent({
+    // FIX: Explicitly type the generic function to ensure `response` is not `unknown`.
+    const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: fullPrompt,
       config: {
@@ -133,7 +135,8 @@ ${frameworkContext}
 
 Prompt: "${prompt}"`;
 
-    const response = await withRetry(() => ai.models.generateContent({
+    // FIX: Explicitly type the generic function to ensure `response` is not `unknown`.
+    const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: fullPrompt,
     }));
@@ -168,7 +171,8 @@ PLOT SUMMARY:
 
 Generate a script outline as a JSON object with an "outline" key containing an array of strings.`;
 
-        const response = await withRetry(() => ai.models.generateContent({
+        // FIX: Explicitly type the generic function to ensure `response` is not `unknown`.
+        const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: fullPrompt,
             config: {
@@ -241,7 +245,8 @@ NOW, WRITE THE SCRIPT FOR THE FOLLOWING SECTION ONLY:
 
 Generate the screenplay for this specific section now.`;
 
-        const response = await withRetry(() => ai.models.generateContent({
+        // FIX: Explicitly type the generic function to ensure `response` is not `unknown`.
+        const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: fullPrompt,
         }));
@@ -277,7 +282,8 @@ ${currentText.trim().length > 0 ? currentText : "No notes yet."}
 
 Based on all of this, provide a few creative, inspiring, and actionable ideas to help them expand on the "${section}" of their game. Frame your response as a helpful brainstorming partner. Append your ideas to their existing notes. Do not repeat their existing notes in your response.`;
 
-    const response = await withRetry(() => ai.models.generateContent({
+    // FIX: Explicitly type the generic function to ensure `response` is not `unknown`.
+    const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
     }));
@@ -303,7 +309,8 @@ export const translateToChinese = async (textToTranslate: string): Promise<strin
 ${textToTranslate}
 --- END OF TEXT ---`;
 
-    const response = await withRetry(() => ai.models.generateContent({
+    // FIX: Explicitly type the generic function to ensure `response` is not `unknown`.
+    const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
     }));

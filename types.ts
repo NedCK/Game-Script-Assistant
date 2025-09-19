@@ -33,3 +33,5 @@ export interface SavedProject {
   gameEngine: GameEngine;
   language: 'en' | 'zh';
 }
+
+export type SaveStatus = 'saved' | 'unsaved' | 'saving';
