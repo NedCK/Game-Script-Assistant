@@ -23,6 +23,19 @@ const characterSchema = {
   required: ['name', 'backstory', 'personality', 'appearance', 'key_motivation']
 };
 
+const outlineSchema = {
+  type: Type.OBJECT,
+  properties: {
+    outline: {
+      type: Type.ARRAY,
+      description: "A list of strings, where each string is a concise summary of a scene, chapter, or key plot point in the game script.",
+      items: { type: Type.STRING }
+    }
+  },
+  required: ['outline']
+};
+
+
 const buildFrameworkContext = (frameworkInputs: FrameworkInputs): string => {
   const context = (Object.keys(frameworkInputs) as Array<keyof FrameworkInputs>)
     .filter(key => frameworkInputs[key].trim() !== '')
@@ -99,7 +112,67 @@ Prompt: "${prompt}"`;
   }
 };
 
-export const generateFullScript = async (prompt: string, characters: Character[], gameEngine: GameEngine, frameworkInputs: FrameworkInputs): Promise<string> => {
+export const generateScriptOutline = async (prompt: string, characters: Character[], frameworkInputs: FrameworkInputs): Promise<string[]> => {
+    try {
+        const characterProfiles = characters.map(c => 
+            `Name: ${c.name}\nPersonality: ${c.personality.join(', ')}\nMotivation: ${c.key_motivation}`
+        ).join('\n\n');
+
+        const frameworkContext = buildFrameworkContext(frameworkInputs);
+
+        const fullPrompt = `You are a professional game narrative designer. Based on the provided game design framework, character profiles, and plot summary, create a structured script outline. The outline should be a list of key scenes or chapters that logically follow the plot.
+
+Here is the context:
+
+${frameworkContext}
+
+---
+CHARACTERS INVOLVED:
+${characterProfiles.length > 0 ? characterProfiles : 'No specific characters provided.'}
+---
+PLOT SUMMARY:
+"${prompt}"
+---
+
+Generate a script outline as a JSON object with an "outline" key containing an array of strings.`;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: fullPrompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: outlineSchema,
+            },
+        });
+        
+        const textResponse = response.text.trim();
+        if (!textResponse) {
+            throw new Error('API returned an empty response for the outline.');
+        }
+
+        const parsed = JSON.parse(textResponse);
+        if (!parsed.outline || !Array.isArray(parsed.outline)) {
+             throw new Error("API returned an invalid format for the outline.");
+        }
+        return parsed.outline as string[];
+
+    } catch(error) {
+        console.error("Error generating script outline:", error);
+        if (error instanceof SyntaxError) {
+          console.error("Failed to parse JSON response from AI:", error);
+          throw new Error("Failed to generate script outline. The AI returned an invalid format.");
+        }
+        throw new Error("Failed to generate the script outline.");
+    }
+}
+
+export const generateScriptSection = async (
+    sectionPrompt: string, 
+    fullOutline: string[],
+    characters: Character[], 
+    gameEngine: GameEngine, 
+    frameworkInputs: FrameworkInputs
+): Promise<string> => {
     try {
         const characterProfiles = characters.map(c => 
             `Name: ${c.name}\nPersonality: ${c.personality.join(', ')}\nMotivation: ${c.key_motivation}\nBackstory: ${c.backstory}`
@@ -112,24 +185,29 @@ export const generateFullScript = async (prompt: string, characters: Character[]
         }
         
         const frameworkContext = buildFrameworkContext(frameworkInputs);
+        const outlineContext = fullOutline.map((item, index) => `${index + 1}. ${item}`).join('\n');
 
-        const fullPrompt = `You are a professional game scriptwriter. Create a complete game script scene for a game made in the ${gameEngine} engine.
-The scene must adhere to the provided game design framework.
-It should include scene descriptions, character actions, and dialogue. Format it like a professional screenplay. Where appropriate, include engine-specific cues for implementation (${engineSpecificCues[gameEngine]}).
+        const fullPrompt = `You are a professional game scriptwriter creating a script for a game made in the ${gameEngine} engine.
+The script must adhere to the provided game design framework and character profiles.
+The full story outline is provided below for context. Your task is to write ONLY the script for the requested section. Do not write the entire script.
 
-Here is the context:
+Format the output like a professional screenplay. Include scene descriptions, character actions, and dialogue. Where appropriate, include engine-specific cues for implementation (${engineSpecificCues[gameEngine]}).
 
-${frameworkContext}
-
+---
+FULL SCRIPT OUTLINE (FOR CONTEXT):
+${outlineContext}
 ---
 CHARACTERS INVOLVED:
-${characterProfiles.length > 0 ? characterProfiles : 'No specific characters provided. Create new ones as needed.'}
+${characterProfiles.length > 0 ? characterProfiles : 'No specific characters provided. Use characters appropriate for the story.'}
 ---
-PLOT & SCENE SUMMARY:
-"${prompt}"
+GAME DESIGN FRAMEWORK:
+${frameworkContext}
+---
+NOW, WRITE THE SCRIPT FOR THE FOLLOWING SECTION ONLY:
+"${sectionPrompt}"
 ---
 
-Generate the screenplay scene now.`;
+Generate the screenplay for this specific section now.`;
 
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
@@ -138,10 +216,11 @@ Generate the screenplay scene now.`;
         return response.text;
 
     } catch(error) {
-        console.error("Error generating full script:", error);
-        throw new Error("Failed to generate the full script.");
+        console.error("Error generating script section:", error);
+        throw new Error("Failed to generate the script section.");
     }
 }
+
 
 export const brainstormFrameworkIdea = async (
   section: keyof FrameworkInputs,
