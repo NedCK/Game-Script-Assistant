@@ -9,25 +9,32 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 /**
  * A utility function to retry an async operation with exponential backoff.
+ * This version is more robust to handle transient network or server-side errors.
  * @param apiCall The async function to call.
  * @param maxRetries The maximum number of retries.
- * @param delay The initial delay in milliseconds.
+ * @param initialDelay The initial delay in milliseconds.
  * @returns The result of the successful API call.
  */
-const withRetry = async <T>(apiCall: () => Promise<T>, maxRetries = 3, delay = 1000): Promise<T> => {
-    let lastError: Error | undefined;
+const withRetry = async <T>(apiCall: () => Promise<T>, maxRetries = 4, initialDelay = 1500): Promise<T> => {
+    let lastError: unknown;
     for (let i = 0; i < maxRetries; i++) {
         try {
             return await apiCall();
         } catch (error) {
-            console.warn(`API call failed (attempt ${i + 1}/${maxRetries}). Retrying in ${delay * Math.pow(2, i)}ms...`, error);
-            lastError = error as Error;
+            lastError = error;
+            console.warn(`API call failed on attempt ${i + 1} of ${maxRetries}.`, error);
+            
             if (i < maxRetries - 1) {
-                await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+                // Exponential backoff with jitter
+                const delay = initialDelay * Math.pow(2, i) + (Math.random() * 1000);
+                console.log(`Retrying in ${Math.round(delay)}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
     }
     console.error("API call failed after all retries.", lastError);
+    // The calling function will catch this and show a user-friendly error.
+    // Re-throwing the last error preserves the original error information for logging.
     throw lastError;
 };
 
