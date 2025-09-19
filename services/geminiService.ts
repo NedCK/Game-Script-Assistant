@@ -7,6 +7,31 @@ if (!process.env.API_KEY) {
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
+/**
+ * A utility function to retry an async operation with exponential backoff.
+ * @param apiCall The async function to call.
+ * @param maxRetries The maximum number of retries.
+ * @param delay The initial delay in milliseconds.
+ * @returns The result of the successful API call.
+ */
+const withRetry = async <T>(apiCall: () => Promise<T>, maxRetries = 3, delay = 1000): Promise<T> => {
+    let lastError: Error | undefined;
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            return await apiCall();
+        } catch (error) {
+            console.warn(`API call failed (attempt ${i + 1}/${maxRetries}). Retrying in ${delay * Math.pow(2, i)}ms...`, error);
+            lastError = error as Error;
+            if (i < maxRetries - 1) {
+                await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+            }
+        }
+    }
+    console.error("API call failed after all retries.", lastError);
+    throw lastError;
+};
+
+
 const characterSchema = {
   type: Type.OBJECT,
   properties: {
@@ -56,14 +81,14 @@ ${frameworkContext}
 
 The user's specific request for this character is: "${prompt}".`;
     
-    const response = await ai.models.generateContent({
+    const response = await withRetry(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: fullPrompt,
       config: {
         responseMimeType: "application/json",
         responseSchema: characterSchema,
       },
-    });
+    }));
 
     const textResponse = response.text.trim();
     if (!textResponse) {
@@ -101,10 +126,10 @@ ${frameworkContext}
 
 Prompt: "${prompt}"`;
 
-    const response = await ai.models.generateContent({
+    const response = await withRetry(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: fullPrompt,
-    });
+    }));
     return response.text;
   } catch (error) {
     console.error("Error generating scene:", error);
@@ -136,14 +161,14 @@ PLOT SUMMARY:
 
 Generate a script outline as a JSON object with an "outline" key containing an array of strings.`;
 
-        const response = await ai.models.generateContent({
+        const response = await withRetry(() => ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: fullPrompt,
             config: {
                 responseMimeType: "application/json",
                 responseSchema: outlineSchema,
             },
-        });
+        }));
         
         const textResponse = response.text.trim();
         if (!textResponse) {
@@ -209,10 +234,10 @@ NOW, WRITE THE SCRIPT FOR THE FOLLOWING SECTION ONLY:
 
 Generate the screenplay for this specific section now.`;
 
-        const response = await ai.models.generateContent({
+        const response = await withRetry(() => ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: fullPrompt,
-        });
+        }));
         return response.text;
 
     } catch(error) {
@@ -245,10 +270,10 @@ ${currentText.trim().length > 0 ? currentText : "No notes yet."}
 
 Based on all of this, provide a few creative, inspiring, and actionable ideas to help them expand on the "${section}" of their game. Frame your response as a helpful brainstorming partner. Append your ideas to their existing notes. Do not repeat their existing notes in your response.`;
 
-    const response = await ai.models.generateContent({
+    const response = await withRetry(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
-    });
+    }));
     return response.text;
 
   } catch (error) {
