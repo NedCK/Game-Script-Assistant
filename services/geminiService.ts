@@ -87,32 +87,53 @@ const outlineSchema = {
   required: ['outline']
 };
 
+/**
+ * Summarizes the entire framework into a concise paragraph.
+ * This is used to create a smaller, more efficient context for all generator calls.
+ */
+const summarizeFramework = async (fullContext: FrameworkInputs): Promise<string> => {
+    const contextString = (Object.keys(fullContext) as Array<keyof FrameworkInputs>)
+      .filter(key => fullContext[key].trim() !== '')
+      .map(key => `--- ${key.toUpperCase()} ---\n${fullContext[key]}`)
+      .join('\n\n');
+      
+    if (!contextString.trim()) {
+      return "No game design context was provided.";
+    }
 
-const buildFrameworkContext = (frameworkInputs: FrameworkInputs): string => {
-  const context = (Object.keys(frameworkInputs) as Array<keyof FrameworkInputs>)
-    .filter(key => frameworkInputs[key].trim() !== '')
-    .map(key => `--- ${key.toUpperCase()} ---\n${frameworkInputs[key]}`)
-    .join('\n\n');
-  
-  return context.length > 0 ? `Here is the core Game Design Framework for context:\n${context}\n---` : 'No game design framework context was provided.';
+    const prompt = `You are a game design expert. Read the following game design document sections and summarize the core concept of the game into a concise, 2-3 sentence paragraph.
+
+--- DOCUMENT ---
+${contextString}
+--- END DOCUMENT ---
+
+Summarize the core concept now.`;
+    
+    const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+        config: { safetySettings },
+    }));
+
+    return response.text;
 };
 
 export const generateCharacter = async (prompt: string, gameEngine: GameEngine, frameworkInputs: FrameworkInputs): Promise<Character> => {
   try {
-    const frameworkContext = buildFrameworkContext(frameworkInputs);
+    const frameworkSummary = await summarizeFramework(frameworkInputs);
     const fullPrompt = `You are an expert character designer for video games.
 Generate a detailed character profile for a game being developed in the ${gameEngine} engine.
-The character must align with the provided game design framework.
+The character must align with the provided summary of the game design framework.
 
-${frameworkContext}
+--- GAME DESIGN SUMMARY ---
+${frameworkSummary}
+---
 
 The user's specific request for this character is: "${prompt}".`;
     
-    // FIX: Explicitly type the generic function to ensure `response` is not `unknown`.
     const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: fullPrompt,
-      // FIX: The 'safetySettings' property should be nested inside the 'config' object.
       config: {
         responseMimeType: "application/json",
         responseSchema: characterSchema,
@@ -145,22 +166,22 @@ export const generateScene = async (prompt: string, gameEngine: GameEngine, fram
         godot: "Keep in mind Godot's node-based structure, mentioning potential nodes (e.g., WorldEnvironment, Light3D) or scene setups that would achieve the described effect."
     };
 
-    const frameworkContext = buildFrameworkContext(frameworkInputs);
+    const frameworkSummary = await summarizeFramework(frameworkInputs);
 
     const fullPrompt = `You are a world-class game script writer. Describe a scene for a video game being built with the ${gameEngine} engine.
-The scene must be consistent with the provided game design framework. Focus on atmosphere, lighting, and key environmental details a player might interact with.
+The scene must be consistent with the provided summary of the game design framework. Focus on atmosphere, lighting, and key environmental details a player might interact with.
 ${engineSpecifics[gameEngine]}
 Format the output as a scene description in a screenplay.
 
-${frameworkContext}
+--- GAME DESIGN SUMMARY ---
+${frameworkSummary}
+---
 
 Prompt: "${prompt}"`;
 
-    // FIX: Explicitly type the generic function to ensure `response` is not `unknown`.
     const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: fullPrompt,
-      // FIX: The 'safetySettings' property should be nested inside the 'config' object.
       config: {
         safetySettings,
       },
@@ -178,13 +199,15 @@ export const generateScriptOutline = async (prompt: string, characters: Characte
             `Name: ${c.name}\nPersonality: ${c.personality.join(', ')}\nMotivation: ${c.key_motivation}`
         ).join('\n\n');
 
-        const frameworkContext = buildFrameworkContext(frameworkInputs);
+        const frameworkSummary = await summarizeFramework(frameworkInputs);
 
-        const fullPrompt = `You are a professional game narrative designer. Based on the provided game design framework, character profiles, and plot summary, create a structured script outline. The outline should be a list of key scenes or chapters that logically follow the plot.
+        const fullPrompt = `You are a professional game narrative designer. Based on the provided game design framework summary, character profiles, and plot summary, create a structured script outline. The outline should be a list of key scenes or chapters that logically follow the plot.
 
 Here is the context:
 
-${frameworkContext}
+--- GAME DESIGN SUMMARY ---
+${frameworkSummary}
+---
 
 ---
 CHARACTERS INVOLVED:
@@ -196,11 +219,9 @@ PLOT SUMMARY:
 
 Generate a script outline as a JSON object with an "outline" key containing an array of strings.`;
 
-        // FIX: Explicitly type the generic function to ensure `response` is not `unknown`.
         const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: fullPrompt,
-            // FIX: The 'safetySettings' property should be nested inside the 'config' object.
             config: {
                 responseMimeType: "application/json",
                 responseSchema: outlineSchema,
@@ -247,11 +268,11 @@ export const generateScriptSection = async (
             godot: "e.g., [GODOT_SIGNAL: emit_signal('player_spoke')], [ANIMATION_PLAYER: play('character_wave')]"
         }
         
-        const frameworkContext = buildFrameworkContext(frameworkInputs);
+        const frameworkSummary = await summarizeFramework(frameworkInputs);
         const outlineContext = fullOutline.map((item, index) => `${index + 1}. ${item}`).join('\n');
 
         const fullPrompt = `You are a professional game scriptwriter creating a script for a game made in the ${gameEngine} engine.
-The script must adhere to the provided game design framework and character profiles.
+The script must adhere to the provided game design framework summary and character profiles.
 The full story outline is provided below for context. Your task is to write ONLY the script for the requested section. Do not write the entire script.
 
 Format the output like a professional screenplay. Include scene descriptions, character actions, and dialogue. Where appropriate, include engine-specific cues for implementation (${engineSpecificCues[gameEngine]}).
@@ -263,8 +284,8 @@ ${outlineContext}
 CHARACTERS INVOLVED:
 ${characterProfiles.length > 0 ? characterProfiles : 'No specific characters provided. Use characters appropriate for the story.'}
 ---
-GAME DESIGN FRAMEWORK:
-${frameworkContext}
+GAME DESIGN SUMMARY:
+${frameworkSummary}
 ---
 NOW, WRITE THE SCRIPT FOR THE FOLLOWING SECTION ONLY:
 "${sectionPrompt}"
@@ -272,11 +293,9 @@ NOW, WRITE THE SCRIPT FOR THE FOLLOWING SECTION ONLY:
 
 Generate the screenplay for this specific section now.`;
 
-        // FIX: Explicitly type the generic function to ensure `response` is not `unknown`.
         const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: fullPrompt,
-            // FIX: The 'safetySettings' property should be nested inside the 'config' object.
             config: {
                 safetySettings,
             },
@@ -289,45 +308,12 @@ Generate the screenplay for this specific section now.`;
     }
 }
 
-/**
- * NEW: Summarizes the entire framework into a concise paragraph.
- * This is used to create a smaller, more efficient context for brainstorming.
- */
-const summarizeFramework = async (fullContext: FrameworkInputs): Promise<string> => {
-    const contextString = (Object.keys(fullContext) as Array<keyof FrameworkInputs>)
-      .filter(key => fullContext[key].trim() !== '')
-      .map(key => `--- ${key.toUpperCase()} ---\n${fullContext[key]}`)
-      .join('\n\n');
-      
-    if (!contextString.trim()) {
-      return "No game design context was provided.";
-    }
-
-    const prompt = `You are a game design expert. Read the following game design document sections and summarize the core concept of the game into a concise, 2-3 sentence paragraph.
-
---- DOCUMENT ---
-${contextString}
---- END DOCUMENT ---
-
-Summarize the core concept now.`;
-    
-    const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: prompt,
-        config: { safetySettings },
-    }));
-
-    return response.text;
-};
-
-
 export const brainstormFrameworkIdea = async (
   section: keyof FrameworkInputs,
   currentText: string,
   fullContext: FrameworkInputs
 ): Promise<string> => {
   try {
-    // REFACTORED: Instead of sending all raw context, generate a summary first.
     const summaryContext = await summarizeFramework(fullContext);
 
     const prompt = `You are a senior game design consultant and creative partner. A designer is working on a new game concept and needs help brainstorming for the "${section}" section of their design document.
@@ -340,14 +326,13 @@ ${summaryContext}
 Here are their current notes for the "${section}" section they are working on:
 --- CURRENT "${section.toUpperCase()}" NOTES ---
 ${currentText.trim().length > 0 ? currentText : "No notes yet."}
+---
 
 Based on all of this, provide a few creative, inspiring, and actionable ideas to help them expand on the "${section}" of their game. Frame your response as a helpful brainstorming partner. Append your ideas to their existing notes. Do not repeat their existing notes in your response.`;
 
-    // FIX: Explicitly type the generic function to ensure `response` is not `unknown`.
     const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
-      // FIX: The 'safetySettings' property should be nested inside the 'config' object.
       config: {
         safetySettings,
       },
@@ -374,11 +359,9 @@ export const translateToChinese = async (textToTranslate: string): Promise<strin
 ${textToTranslate}
 --- END OF TEXT ---`;
 
-    // FIX: Explicitly type the generic function to ensure `response` is not `unknown`.
     const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
-      // FIX: The 'safetySettings' property should be nested inside the 'config' object.
       config: {
         safetySettings,
       },
