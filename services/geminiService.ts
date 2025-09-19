@@ -1,5 +1,5 @@
 // FIX: Import GenerateContentResponse to correctly type API call results.
-import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI, Type, GenerateContentResponse, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { Character, GameEngine, FrameworkInputs } from '../types';
 
 if (!process.env.API_KEY) {
@@ -38,6 +38,25 @@ const withRetry = async <T>(apiCall: () => Promise<T>, maxRetries = 4, initialDe
     // Re-throwing the last error preserves the original error information for logging.
     throw lastError;
 };
+
+const safetySettings = [
+  {
+    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+  },
+];
 
 
 const characterSchema = {
@@ -93,9 +112,11 @@ The user's specific request for this character is: "${prompt}".`;
     const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: fullPrompt,
+      // FIX: The 'safetySettings' property should be nested inside the 'config' object.
       config: {
         responseMimeType: "application/json",
         responseSchema: characterSchema,
+        safetySettings,
       },
     }));
 
@@ -139,6 +160,10 @@ Prompt: "${prompt}"`;
     const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: fullPrompt,
+      // FIX: The 'safetySettings' property should be nested inside the 'config' object.
+      config: {
+        safetySettings,
+      },
     }));
     return response.text;
   } catch (error) {
@@ -175,9 +200,11 @@ Generate a script outline as a JSON object with an "outline" key containing an a
         const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: fullPrompt,
+            // FIX: The 'safetySettings' property should be nested inside the 'config' object.
             config: {
                 responseMimeType: "application/json",
                 responseSchema: outlineSchema,
+                safetySettings,
             },
         }));
         
@@ -249,6 +276,10 @@ Generate the screenplay for this specific section now.`;
         const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: fullPrompt,
+            // FIX: The 'safetySettings' property should be nested inside the 'config' object.
+            config: {
+                safetySettings,
+            },
         }));
         return response.text;
 
@@ -286,6 +317,10 @@ Based on all of this, provide a few creative, inspiring, and actionable ideas to
     const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
+      // FIX: The 'safetySettings' property should be nested inside the 'config' object.
+      config: {
+        safetySettings,
+      },
     }));
     return response.text;
 
@@ -313,6 +348,10 @@ ${textToTranslate}
     const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
+      // FIX: The 'safetySettings' property should be nested inside the 'config' object.
+      config: {
+        safetySettings,
+      },
     }));
     return response.text;
   } catch (error) {
