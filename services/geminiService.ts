@@ -93,6 +93,18 @@ const characterSchema = {
   required: ['name', 'backstory', 'personality', 'appearance', 'key_motivation']
 };
 
+const characterListSchema = {
+  type: Type.OBJECT,
+  properties: {
+    characters: {
+      type: Type.ARRAY,
+      description: "A list of refined character profiles.",
+      items: characterSchema
+    }
+  },
+  required: ['characters']
+};
+
 const outlineSchema = {
   type: Type.OBJECT,
   properties: {
@@ -136,25 +148,33 @@ Summarize the core concept now.`;
     return response.text;
 };
 
-export const generateCharacter = async (prompt: string, gameEngine: GameEngine, frameworkInputs: FrameworkInputs): Promise<Character> => {
+export const generateCharacter = async (prompts: string[], gameEngine: GameEngine, frameworkInputs: FrameworkInputs): Promise<Character[]> => {
+  if (prompts.length === 0) return [];
   try {
     const frameworkSummary = await summarizeFramework(frameworkInputs);
-    const fullPrompt = `You are an expert character designer for video games.
-Generate a detailed character profile for a game being developed in the ${gameEngine} engine.
-The character must align with the provided summary of the game design framework.
+    const characterConcepts = prompts.map((p, i) => `Concept ${i + 1}: ${p}`).join('\n');
+
+    const fullPrompt = `You are an expert narrative designer for video games, working on a project for the ${gameEngine} engine.
+Based on the provided game design summary and a list of raw character concepts, your task is to refine them into cohesive character profiles.
+For each character, provide a concise summary. Crucially, analyze all the concepts together to define plausible relationships between these characters and weave them into their backstories.
 
 --- GAME DESIGN SUMMARY ---
 ${frameworkSummary}
 ---
 
-The user's specific request for this character is: "${prompt}".`;
+--- RAW CHARACTER CONCEPTS ---
+${characterConcepts}
+---
+
+Generate a single JSON object. This object must contain a single key, "characters", which is an array of character profile objects. Each character object must strictly follow the provided schema.
+`;
     
     const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: fullPrompt,
       config: {
         responseMimeType: "application/json",
-        responseSchema: characterSchema,
+        responseSchema: characterListSchema,
         safetySettings,
       },
     }));
@@ -164,7 +184,11 @@ The user's specific request for this character is: "${prompt}".`;
         throw new Error('API returned an empty response.');
     }
     
-    return JSON.parse(textResponse) as Character;
+    const parsedData = JSON.parse(textResponse);
+    if (!parsedData.characters || !Array.isArray(parsedData.characters)) {
+      throw new Error("API returned an invalid format. Expected an object with a 'characters' array.");
+    }
+    return parsedData.characters as Character[];
 
   } catch (error) {
     console.error("Error generating character:", error);
@@ -176,26 +200,33 @@ The user's specific request for this character is: "${prompt}".`;
   }
 };
 
-export const generateScene = async (prompt: string, gameEngine: GameEngine, frameworkInputs: FrameworkInputs): Promise<string> => {
+export const generateScene = async (prompts: string[], gameEngine: GameEngine, frameworkInputs: FrameworkInputs): Promise<string> => {
+  if (prompts.length === 0) return "";
   try {
      const engineSpecifics = {
-        unity: "Include notes on potential particle effects or shaders that could be used in Unity.",
-        unreal: "Focus on details that would leverage Unreal Engine's lighting and material systems, like Lumen and Nanite. Mention potential assets or visual effects.",
-        godot: "Keep in mind Godot's node-based structure, mentioning potential nodes (e.g., WorldEnvironment, Light3D) or scene setups that would achieve the described effect."
+        unity: "e.g., mention potential particle effects or shaders.",
+        unreal: "e.g., mention potential lighting setups using Lumen.",
+        godot: "e.g., mention potential nodes or scene setups."
     };
 
     const frameworkSummary = await summarizeFramework(frameworkInputs);
+    const sceneConcepts = prompts.map((p, i) => `SCENE ${i + 1} CONCEPT:\n${p}`).join('\n\n');
 
-    const fullPrompt = `You are a world-class game script writer. Describe a scene for a video game being built with the ${gameEngine} engine.
-The scene must be consistent with the provided summary of the game design framework. Focus on atmosphere, lighting, and key environmental details a player might interact with.
-${engineSpecifics[gameEngine]}
-Format the output as a scene description in a screenplay.
+    const fullPrompt = `You are a world-class game script editor. Your task is to take a list of raw scene descriptions and refine them into clear, concise, and evocative scene summaries for a video game script being built with the ${gameEngine} engine.
+The scenes must be consistent with the provided summary of the game design framework. Focus on atmosphere, key actions, and the purpose of the scene within the narrative.
+Do not expand them into full screenplay format. Instead, polish them into powerful summaries that can be used for a high-level outline.
+Where relevant, you can briefly mention engine-specific possibilities (${engineSpecifics[gameEngine]}).
 
 --- GAME DESIGN SUMMARY ---
 ${frameworkSummary}
 ---
 
-Prompt: "${prompt}"`;
+--- RAW SCENE DESCRIPTIONS ---
+${sceneConcepts}
+---
+
+Now, provide the refined scene summaries. Start each summary with "SCENE X:" and separate each scene with a double line break.
+`;
 
     const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
       model: "gemini-2.5-flash",

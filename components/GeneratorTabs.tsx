@@ -8,7 +8,7 @@ import { useI18n } from '../i18n/I18nProvider';
 type ActiveTab = 'character' | 'scene' | 'fullScript';
 
 interface GeneratorTabsProps {
-    onCharacterGenerated: (character: Character) => void;
+    onCharactersGenerated: (characters: Character[]) => void;
     onSceneGenerated: (content: string) => void;
     onScriptGenerated: (content: string) => void;
     characters: Character[];
@@ -48,7 +48,7 @@ export const GeneratorTabs: React.FC<GeneratorTabsProps> = (props) => {
             <div className="pt-6">
                 {activeTab === 'character' && (
                     <CharacterGenerator
-                        onCharacterGenerated={props.onCharacterGenerated}
+                        onCharactersGenerated={props.onCharactersGenerated}
                         gameEngine={props.gameEngine}
                         frameworkInputs={props.frameworkInputs}
                     />

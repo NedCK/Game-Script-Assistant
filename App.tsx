@@ -124,10 +124,14 @@ function App() {
     };
   }, [projectName, frameworkInputs, characters, scriptPieces, gameEngine, language]);
 
-  const handleCharacterGenerated = useCallback((character: Character) => {
-    setCharacters(prev => [...prev, character]);
-    const content = `角色简介\n姓名: ${character.name}\n背景故事: ${character.backstory}\n性格: ${character.personality.join(', ')}\n外貌: ${character.appearance}\n核心动机: ${character.key_motivation}`;
-    setScriptPieces(prev => [...prev, { id: Date.now(), type: 'scene', content }]);
+  const handleCharactersGenerated = useCallback((newCharacters: Character[]) => {
+    setCharacters(prev => [...prev, ...newCharacters]);
+    const newScriptPieces = newCharacters.map((character, index) => {
+      const content = `角色简介\n姓名: ${character.name}\n背景故事: ${character.backstory}\n性格: ${character.personality.join(', ')}\n外貌: ${character.appearance}\n核心动机: ${character.key_motivation}`;
+      // Add index to ensure unique ID if generated in the same millisecond
+      return { id: Date.now() + index, type: 'scene' as const, content };
+    });
+    setScriptPieces(prev => [...prev, ...newScriptPieces]);
   }, []);
 
   const handleSceneGenerated = useCallback((content: string) => {
@@ -281,7 +285,7 @@ function App() {
                 frameworkInputs={frameworkInputs}
                 onFrameworkChange={handleFrameworkChange}
                 onTranslateFrameworkSection={handleTranslateFrameworkSection}
-                onCharacterGenerated={handleCharacterGenerated}
+                onCharactersGenerated={handleCharactersGenerated}
                 onSceneGenerated={handleSceneGenerated}
                 onScriptGenerated={handleScriptGenerated}
                 characters={characters}

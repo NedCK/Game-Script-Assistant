@@ -10,7 +10,7 @@ interface MainLeftTabsProps {
     frameworkInputs: FrameworkInputs;
     onFrameworkChange: (section: keyof FrameworkInputs, value: string) => void;
     onTranslateFrameworkSection: (section: keyof FrameworkInputs) => Promise<void>;
-    onCharacterGenerated: (character: Character) => void;
+    onCharactersGenerated: (characters: Character[]) => void;
     onSceneGenerated: (content: string) => void;
     onScriptGenerated: (content: string) => void;
     characters: Character[];
@@ -56,7 +56,7 @@ export const MainLeftTabs: React.FC<MainLeftTabsProps> = (props) => {
                 {activeTab === 'content' && (
                      <div className="p-6">
                         <GeneratorTabs
-                            onCharacterGenerated={props.onCharacterGenerated}
+                            onCharactersGenerated={props.onCharactersGenerated}
                             onSceneGenerated={props.onSceneGenerated}
                             onScriptGenerated={props.onScriptGenerated}
                             characters={props.characters}
