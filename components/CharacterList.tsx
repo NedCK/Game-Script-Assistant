@@ -30,11 +30,17 @@ export const CharacterList: React.FC<CharacterListProps> = ({ characters }) => {
           characters.map((char, index) => (
             <div key={index} className="bg-gray-700/50 p-4 rounded-lg">
               <h3 className="font-bold text-lg text-white">{char.name}</h3>
-              <p className="text-sm text-gray-400 italic mb-2">{char.key_motivation}</p>
-              <div className="flex flex-wrap gap-2">
-                {char.personality.map((trait, i) => (
-                  <span key={i} className="bg-teal-900/70 text-teal-300 text-xs font-semibold px-2 py-1 rounded-full">{trait}</span>
-                ))}
+              <div className="mt-3">
+                <h4 className="text-xs font-bold uppercase text-teal-400 tracking-wider">{t('characterCardAppearance')}</h4>
+                <p className="text-sm text-gray-300 mt-1">{char.appearance}</p>
+              </div>
+              <div className="mt-3">
+                <h4 className="text-xs font-bold uppercase text-teal-400 tracking-wider">{t('characterCardBackground')}</h4>
+                <p className="text-sm text-gray-300 mt-1">{char.backstory}</p>
+              </div>
+              <div className="mt-3">
+                <h4 className="text-xs font-bold uppercase text-teal-400 tracking-wider">{t('characterCardRelationships')}</h4>
+                <p className="text-sm text-gray-300 mt-1">{char.relationships}</p>
               </div>
             </div>
           ))

@@ -80,17 +80,12 @@ const safetySettings = [
 const characterSchema = {
   type: Type.OBJECT,
   properties: {
-    name: { type: Type.STRING, description: 'The character\'s full name.' },
-    backstory: { type: Type.STRING, description: 'A detailed backstory for the character that aligns with the provided game design framework.' },
-    personality: { 
-      type: Type.ARRAY, 
-      items: { type: Type.STRING },
-      description: 'A list of key personality traits (e.g., "Brave", "Cynical").'
-    },
-    appearance: { type: Type.STRING, description: 'A physical description of the character, fitting the game\'s art style.' },
-    key_motivation: { type: Type.STRING, description: 'The character\'s primary goal or motivation, rooted in the game\'s narrative.' }
+    name: { type: Type.STRING, description: "角色的基本信息，主要是姓名。(Basic info, mainly the character's name.)" },
+    appearance: { type: Type.STRING, description: "角色的基本外貌形象描述。(A basic description of the character's appearance.)" },
+    backstory: { type: Type.STRING, description: "角色的背景故事，与游戏设计框架保持一致。(The character's background story, consistent with the game design framework.)" },
+    relationships: { type: Type.STRING, description: "描述该角色与其他被创造角色之间的关系。(A description of this character's relationship with the other characters being generated.)" }
   },
-  required: ['name', 'backstory', 'personality', 'appearance', 'key_motivation']
+  required: ['name', 'appearance', 'backstory', 'relationships']
 };
 
 const characterListSchema = {
@@ -155,8 +150,14 @@ export const generateCharacter = async (prompts: string[], gameEngine: GameEngin
     const characterConcepts = prompts.map((p, i) => `Concept ${i + 1}: ${p}`).join('\n');
 
     const fullPrompt = `You are an expert narrative designer for video games, working on a project for the ${gameEngine} engine.
-Based on the provided game design summary and a list of raw character concepts, your task is to refine them into cohesive character profiles.
-For each character, provide a concise summary. Crucially, analyze all the concepts together to define plausible relationships between these characters and weave them into their backstories.
+Based on the provided game design summary and a list of raw character concepts, your task is to refine them into CONCISE character profiles suitable for script generation.
+For each character, you MUST ONLY provide these four things:
+1. name: Basic information, primarily their name.
+2. appearance: A brief description of their physical appearance.
+3. backstory: A brief background story.
+4. relationships: A description of their relationships with the OTHER characters being generated in this batch. This is crucial.
+
+Do NOT include personality traits or motivations as separate fields. These elements can be subtly included in the backstory if necessary, but the output must be minimal and focused.
 
 --- GAME DESIGN SUMMARY ---
 ${frameworkSummary}
@@ -166,7 +167,7 @@ ${frameworkSummary}
 ${characterConcepts}
 ---
 
-Generate a single JSON object. This object must contain a single key, "characters", which is an array of character profile objects. Each character object must strictly follow the provided schema.
+Generate a single JSON object. This object must contain a single key, "characters", which is an array of character profile objects. Each character object must strictly follow the provided schema and contain ONLY the 'name', 'appearance', 'backstory', and 'relationships' fields.
 `;
     
     const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
@@ -245,7 +246,7 @@ Now, provide the refined scene summaries. Start each summary with "SCENE X:" and
 export const generateScriptOutline = async (prompt: string, characters: Character[], frameworkInputs: FrameworkInputs): Promise<string[]> => {
     try {
         const characterProfiles = characters.map(c => 
-            `Name: ${c.name}\nPersonality: ${c.personality.join(', ')}\nMotivation: ${c.key_motivation}`
+            `Name: ${c.name}\nAppearance: ${c.appearance}\nBackstory: ${c.backstory}\nRelationships: ${c.relationships}`
         ).join('\n\n');
 
         const frameworkSummary = await summarizeFramework(frameworkInputs);
@@ -308,7 +309,7 @@ export const generateScriptSection = async (
 ): Promise<string> => {
     try {
         const characterProfiles = characters.map(c => 
-            `Name: ${c.name}\nPersonality: ${c.personality.join(', ')}\nMotivation: ${c.key_motivation}\nBackstory: ${c.backstory}`
+            `Name: ${c.name}\nAppearance: ${c.appearance}\nBackstory: ${c.backstory}\nRelationships: ${c.relationships}`
         ).join('\n\n');
 
         const engineSpecificCues = {

@@ -1,9 +1,8 @@
 export interface Character {
   name: string;
-  backstory: string;
-  personality: string[];
   appearance: string;
-  key_motivation: string;
+  backstory: string;
+  relationships: string;
 }
 
 export interface ScriptPiece {
