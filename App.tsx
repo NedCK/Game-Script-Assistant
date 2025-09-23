@@ -144,6 +144,7 @@ function App() {
   
   const handleClearScript = useCallback(() => {
     setScriptPieces([]);
+    setCharacters([]);
   }, []);
 
   const handleFrameworkChange = useCallback((section: keyof FrameworkInputs, value: string) => {
