@@ -116,18 +116,6 @@ const characterListSchema = {
   required: ['characters']
 };
 
-const outlineSchema = {
-  type: Type.OBJECT,
-  properties: {
-    outline: {
-      type: Type.ARRAY,
-      description: "A list of strings, where each string is a concise summary of a scene, chapter, or key plot point in the game script.",
-      items: { type: Type.STRING }
-    }
-  },
-  required: ['outline']
-};
-
 /**
  * Summarizes the entire framework into a concise paragraph.
  * This is used to create a smaller, more efficient context for all generator calls.
@@ -258,63 +246,6 @@ Now, provide the refined scene summaries. Start each summary with "SCENE X:" and
     throw new Error("Failed to generate scene description.");
   }
 };
-
-export const generateScriptOutline = async (prompt: string, characters: Character[], frameworkInputs: FrameworkInputs): Promise<string[]> => {
-    try {
-        const characterProfiles = characters.map(c => 
-            `Name: ${c.name}\nAppearance: ${c.appearance}\nBackstory: ${c.backstory}\nRelationships: ${c.relationships}`
-        ).join('\n\n');
-
-        const frameworkSummary = await summarizeFramework(frameworkInputs);
-
-        const fullPrompt = `You are a professional game narrative designer. Based on the provided game design framework summary, character profiles, and plot summary, create a structured script outline. The outline should be a list of key scenes or chapters that logically follow the plot.
-
-Here is the context:
-
---- GAME DESIGN SUMMARY ---
-${frameworkSummary}
----
-
----
-CHARACTERS INVOLVED:
-${characterProfiles.length > 0 ? characterProfiles : 'No specific characters provided.'}
----
-PLOT SUMMARY:
-"${prompt}"
----
-
-Generate a script outline as a JSON object with an "outline" key containing an array of strings.`;
-
-        const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: fullPrompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: outlineSchema,
-                safetySettings,
-            },
-        }));
-        
-        const textResponse = response.text.trim();
-        if (!textResponse) {
-            throw new Error('API returned an empty response for the outline.');
-        }
-
-        const parsed = JSON.parse(textResponse);
-        if (!parsed.outline || !Array.isArray(parsed.outline)) {
-             throw new Error("API returned an invalid format for the outline.");
-        }
-        return parsed.outline as string[];
-
-    } catch(error) {
-        console.error("Error generating script outline:", error);
-        if (error instanceof SyntaxError) {
-          console.error("Failed to parse JSON response from AI:", error);
-          throw new Error("Failed to generate script outline. The AI returned an invalid format.");
-        }
-        throw new Error("Failed to generate the script outline.");
-    }
-}
 
 export const generateScriptSection = async (
     sectionPrompt: string, 
