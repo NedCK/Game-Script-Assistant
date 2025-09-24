@@ -88,5 +88,8 @@
   "addSectionButton": "添加剧本章节",
   "removeSectionButton": "移除",
   "clearAllSectionsButton": "清除所有章节",
-  "sectionDescriptionPlaceholder": "描述本章节的剧情..."
+  "sectionDescriptionPlaceholder": "描述本章节的剧情...",
+  "generateFullScriptButton": "生成完整剧本",
+  "generatingFullScriptButton": "生成中...",
+  "generateFullScriptWarning": "注意：生成多个章节可能需要一些时间。"
 }

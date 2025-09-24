@@ -88,5 +88,8 @@
   "addSectionButton": "Add Script Section",
   "removeSectionButton": "Remove",
   "clearAllSectionsButton": "Clear All Sections",
-  "sectionDescriptionPlaceholder": "Describe what happens in this section..."
+  "sectionDescriptionPlaceholder": "Describe what happens in this section...",
+  "generateFullScriptButton": "Generate Full Script",
+  "generatingFullScriptButton": "Generating...",
+  "generateFullScriptWarning": "Note: Generating multiple sections may take some time."
 }

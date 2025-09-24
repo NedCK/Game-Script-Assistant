@@ -7,7 +7,7 @@ import { I18nProvider } from './i18n/I18nProvider';
 import { Character, ScriptPiece, GameEngine, FrameworkInputs, SavedProject, SaveStatus, GeneratorInputs, OutlineItem } from './types';
 import { ScriptEditor } from './components/ScriptEditor';
 import { MainLeftTabs } from './components/MainLeftTabs';
-import { translateToChinese, updateApiKey } from './services/geminiService';
+import { translateToChinese } from './services/geminiService';
 
 const initialFrameworkInputs: FrameworkInputs = {
   theme: '',
@@ -51,27 +51,8 @@ function App() {
   const [generatorInputs, setGeneratorInputs] = useState<GeneratorInputs>(initialGeneratorInputs);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [customApiKey, setCustomApiKey] = useState<string>(() => sessionStorage.getItem('customApiKey') || '');
-  const [customApiEndpoint, setCustomApiEndpoint] = useState<string>(() => sessionStorage.getItem('customApiEndpoint') || '');
-
 
   const isInitialLoad = useRef(true);
-
-  // Effect to update the API key in the service when it changes
-  useEffect(() => {
-    updateApiKey(customApiKey, customApiEndpoint);
-    if (customApiKey) {
-      sessionStorage.setItem('customApiKey', customApiKey);
-    } else {
-      sessionStorage.removeItem('customApiKey');
-    }
-    if (customApiEndpoint) {
-      sessionStorage.setItem('customApiEndpoint', customApiEndpoint);
-    } else {
-      sessionStorage.removeItem('customApiEndpoint');
-    }
-  }, [customApiKey, customApiEndpoint]);
-
 
   const loadProjectData = (data: SavedProject) => {
       if (data.version > APP_VERSION) {
@@ -347,10 +328,6 @@ function App() {
           onClose={() => setIsSettingsOpen(false)}
           gameEngine={gameEngine}
           onGameEngineChange={setGameEngine}
-          customApiKey={customApiKey}
-          onCustomApiKeyChange={setCustomApiKey}
-          customApiEndpoint={customApiEndpoint}
-          onCustomApiEndpointChange={setCustomApiEndpoint}
           appVersion={APP_VERSION.toString()}
         />
       </div>

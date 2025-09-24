@@ -27,6 +27,7 @@ const TrashIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 
 export const FullScriptGenerator: React.FC<FullScriptGeneratorProps> = ({ outline, onOutlineChange, characters, onScriptGenerated, gameEngine, frameworkInputs }) => {
   const [generatingSectionId, setGeneratingSectionId] = useState<number | null>(null);
+  const [isGeneratingAll, setIsGeneratingAll] = useState(false);
   const [generatedSectionIds, setGeneratedSectionIds] = useState<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const { t } = useI18n();
@@ -57,7 +58,7 @@ export const FullScriptGenerator: React.FC<FullScriptGeneratorProps> = ({ outlin
   };
 
   const handleGenerateSection = async (section: OutlineItem) => {
-      if (generatingSectionId !== null || !section.description.trim()) return;
+      if (generatingSectionId !== null || isGeneratingAll || !section.description.trim()) return;
       
       setGeneratingSectionId(section.id);
       setError(null);
@@ -72,6 +73,29 @@ export const FullScriptGenerator: React.FC<FullScriptGeneratorProps> = ({ outlin
           setGeneratingSectionId(null);
       }
   };
+
+  const handleGenerateFullScript = async () => {
+    const sectionsToGenerate = outline.filter(item => item.description.trim() && !generatedSectionIds.has(item.id));
+    if (sectionsToGenerate.length === 0 || isGeneratingAll || generatingSectionId) return;
+
+    setIsGeneratingAll(true);
+    setError(null);
+
+    try {
+        const fullOutlineDescriptions = outline.map(item => item.description);
+        for (const section of sectionsToGenerate) {
+            setGeneratingSectionId(section.id); // Visually indicate which section is being generated
+            const scriptContent = await generateScriptSection(section.description, fullOutlineDescriptions, characters, gameEngine, frameworkInputs);
+            onScriptGenerated(`--- ${t('scriptSectionHeader')} ${outline.findIndex(item => item.id === section.id) + 1}: ${section.description} ---\n\n${scriptContent}`);
+            setGeneratedSectionIds(prev => new Set(prev).add(section.id));
+        }
+    } catch (err) {
+        setError(err instanceof Error ? err.message : 'An unknown error occurred during generation.');
+    } finally {
+        setGeneratingSectionId(null);
+        setIsGeneratingAll(false);
+    }
+  };
   
   const handleOutlineChange = (id: number, newDescription: string) => {
       onOutlineChange(outline.map(item => item.id === id ? { ...item, description: newDescription } : item));
@@ -85,6 +109,8 @@ export const FullScriptGenerator: React.FC<FullScriptGeneratorProps> = ({ outlin
       }
   };
 
+  const hasContentToGenerate = outline.some(item => item.description.trim() && !generatedSectionIds.has(item.id));
+
   return (
     <div>
       <h3 className="text-lg font-semibold text-gray-200 mb-2">{t('fullScriptGeneratorTitle')}</h3>
@@ -97,7 +123,7 @@ export const FullScriptGenerator: React.FC<FullScriptGeneratorProps> = ({ outlin
 
       <div className="space-y-4 mt-6">
         {outline.map((item, index) => {
-            const isGenerating = generatingSectionId === item.id;
+            const isGeneratingThis = generatingSectionId === item.id;
             const isGenerated = generatedSectionIds.has(item.id);
             return (
                 <div key={item.id} className="bg-gray-700/50 p-3 rounded-md transition-all">
@@ -108,7 +134,7 @@ export const FullScriptGenerator: React.FC<FullScriptGeneratorProps> = ({ outlin
                           className="text-red-400 hover:text-red-300 disabled:opacity-50"
                           aria-label={t('removeSectionButton')}
                           title={t('removeSectionButton')}
-                          disabled={generatingSectionId !== null}
+                          disabled={generatingSectionId !== null || isGeneratingAll}
                         >
                             <TrashIcon className="w-4 h-4" />
                         </button>
@@ -121,14 +147,14 @@ export const FullScriptGenerator: React.FC<FullScriptGeneratorProps> = ({ outlin
                     />
                     <button
                       onClick={() => handleGenerateSection(item)}
-                      disabled={isGenerating || (generatingSectionId !== null && !isGenerating) || !item.description.trim()}
+                      disabled={isGeneratingThis || isGeneratingAll || (generatingSectionId !== null && !isGeneratingThis) || !item.description.trim()}
                       className={`w-full text-sm font-bold py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center ${
                         isGenerated 
                           ? 'bg-green-800/60 text-green-300 cursor-default' 
                           : 'bg-teal-600 hover:bg-teal-700 text-white'
                       } disabled:bg-gray-500 disabled:cursor-not-allowed`}
                     >
-                        {isGenerating ? <LoadingSpinner /> : (isGenerated ? `✅ ${t('sectionGeneratedButton')}` : t('generateSectionButton'))}
+                        {isGeneratingThis ? <LoadingSpinner /> : (isGenerated ? `✅ ${t('sectionGeneratedButton')}` : t('generateSectionButton'))}
                     </button>
                 </div>
             );
@@ -158,6 +184,19 @@ export const FullScriptGenerator: React.FC<FullScriptGeneratorProps> = ({ outlin
               </button>
           )}
       </div>
+
+      {outline.length > 0 && (
+        <div className="mt-6 border-t border-gray-700 pt-6">
+            <p className="text-xs text-gray-500 mb-2">{t('generateFullScriptWarning')}</p>
+            <button
+                onClick={handleGenerateFullScript}
+                disabled={!hasContentToGenerate || isGeneratingAll || generatingSectionId !== null}
+                className="w-full bg-gradient-to-r from-teal-600 to-sky-600 hover:from-teal-700 hover:to-sky-700 text-white font-bold py-3 px-4 rounded-md transition-all duration-200 flex items-center justify-center disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            >
+                {isGeneratingAll ? <><LoadingSpinner /> <span className="ml-2">{t('generatingFullScriptButton')}</span></> : t('generateFullScriptButton')}
+            </button>
+        </div>
+      )}
 
       {error && <p className="text-red-400 text-sm mt-4">{error}</p>}
     </div>

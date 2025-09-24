@@ -2,59 +2,12 @@
 import { GoogleGenAI, Type, GenerateContentResponse, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { Character, GameEngine, FrameworkInputs } from '../types';
 
-// The environment proxy will handle authentication, so we initialize with an empty key
-// to satisfy the constructor, assuming the proxy will override it.
-// The user can provide their own key in the settings to override this.
-let ai = new GoogleGenAI({ apiKey: "" });
+// The API key MUST be provided via the environment variable.
+if (!process.env.API_KEY || process.env.API_KEY.trim() === '') {
+  throw new Error("API key is missing or empty. Please set the API_KEY environment variable.");
+}
 
-/**
- * Re-initializes the AI client with a new API key and optional endpoint.
- * If the provided key/endpoint is empty, it reverts to the default environment-based authentication.
- * @param newApiKey The new API key to use.
- * @param newApiEndpoint The custom API endpoint to use.
- */
-export const updateApiKey = (newApiKey?: string | null, newApiEndpoint?: string | null) => {
-  const hasCustomKey = newApiKey && newApiKey.trim();
-  const hasCustomEndpoint = newApiEndpoint && newApiEndpoint.trim();
-
-  // If there are no custom settings, use the default environment proxy auth.
-  if (!hasCustomKey && !hasCustomEndpoint) {
-    ai = new GoogleGenAI({ apiKey: "" });
-    console.log("Using default environment authentication.");
-    return;
-  }
-
-  // If there are custom settings, a key is required.
-  if (!hasCustomKey) {
-    console.error("Custom API Key is required when using a custom endpoint, but was not provided. Reverting to default.");
-    ai = new GoogleGenAI({ apiKey: "" });
-    return;
-  }
-  
-  const options: { apiKey: string, clientOptions?: { apiEndpoint: string } } = {
-    apiKey: newApiKey,
-  };
-
-  if (hasCustomEndpoint) {
-    try {
-      // Basic validation to ensure it's a valid URL format
-      const url = new URL(newApiEndpoint!);
-      options.clientOptions = { apiEndpoint: url.toString() };
-      console.log(`Using custom API endpoint: ${options.clientOptions.apiEndpoint}`);
-    } catch (error) {
-      console.error("Invalid custom API endpoint URL provided:", newApiEndpoint, error);
-      // Revert to default if the endpoint is invalid.
-      ai = new GoogleGenAI({ apiKey: "" });
-      console.log("Reverted to default AI client instance due to invalid endpoint.");
-      return;
-    }
-  }
-
-  // Re-create the client instance with the user's custom key and optional endpoint.
-  ai = new GoogleGenAI(options);
-  console.log("AI client re-initialized with custom settings.");
-};
-
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 /**
  * A utility function to retry an async operation with exponential backoff.
