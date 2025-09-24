@@ -9,6 +9,8 @@ interface SettingsModalProps {
   onGameEngineChange: (engine: GameEngine) => void;
   customApiKey: string;
   onCustomApiKeyChange: (key: string) => void;
+  customApiEndpoint: string;
+  onCustomApiEndpointChange: (endpoint: string) => void;
   appVersion: string;
 }
 
@@ -25,6 +27,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onGameEngineChange,
   customApiKey,
   onCustomApiKeyChange,
+  customApiEndpoint,
+  onCustomApiEndpointChange,
   appVersion,
 }) => {
   const { t } = useI18n();
@@ -68,9 +72,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <p className="text-xs text-gray-500 mt-1">{t('settingsGameEngineDescription')}</p>
           </div>
           
-          {/* API Key Setting */}
+          {/* API Configuration Setting */}
           <div className="border-t border-gray-700 pt-6">
             <h3 className="text-lg font-semibold text-gray-200 mb-2">{t('settingsApiKeyTitle')}</h3>
+            
+            {/* API Key */}
             <label htmlFor="apiKey" className="block text-sm font-medium text-gray-300 mb-2">
               {t('settingsApiKeyLabel')}
             </label>
@@ -82,7 +88,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               placeholder={t('settingsApiKeyPlaceholder')}
               className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition"
             />
-            <p className="text-xs text-gray-500 mt-1">{t('settingsApiKeyDescription')}</p>
+            <p className="text-xs text-gray-500 mt-1 mb-4">{t('settingsApiKeyDescription')}</p>
+
+            {/* API Endpoint */}
+            <label htmlFor="apiEndpoint" className="block text-sm font-medium text-gray-300 mb-2">
+              {t('settingsApiEndpointLabel')}
+            </label>
+            <input
+              id="apiEndpoint"
+              type="text"
+              value={customApiEndpoint}
+              onChange={(e) => onCustomApiEndpointChange(e.target.value)}
+              placeholder={t('settingsApiEndpointPlaceholder')}
+              className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition"
+              aria-describedby="apiEndpoint-description"
+            />
+            <p id="apiEndpoint-description" className="text-xs text-gray-500 mt-1">{t('settingsApiEndpointDescription')}</p>
           </div>
 
           {/* About this App Section */}

@@ -44,19 +44,25 @@ function App() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [customApiKey, setCustomApiKey] = useState<string>(() => sessionStorage.getItem('customApiKey') || '');
+  const [customApiEndpoint, setCustomApiEndpoint] = useState<string>(() => sessionStorage.getItem('customApiEndpoint') || '');
 
 
   const isInitialLoad = useRef(true);
 
   // Effect to update the API key in the service when it changes
   useEffect(() => {
-    updateApiKey(customApiKey);
+    updateApiKey(customApiKey, customApiEndpoint);
     if (customApiKey) {
       sessionStorage.setItem('customApiKey', customApiKey);
     } else {
       sessionStorage.removeItem('customApiKey');
     }
-  }, [customApiKey]);
+    if (customApiEndpoint) {
+      sessionStorage.setItem('customApiEndpoint', customApiEndpoint);
+    } else {
+      sessionStorage.removeItem('customApiEndpoint');
+    }
+  }, [customApiKey, customApiEndpoint]);
 
 
   const loadProjectData = (data: SavedProject) => {
@@ -314,6 +320,8 @@ function App() {
           onGameEngineChange={setGameEngine}
           customApiKey={customApiKey}
           onCustomApiKeyChange={setCustomApiKey}
+          customApiEndpoint={customApiEndpoint}
+          onCustomApiEndpointChange={setCustomApiEndpoint}
           appVersion={APP_VERSION.toString()}
         />
       </div>

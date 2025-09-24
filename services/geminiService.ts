@@ -10,19 +10,35 @@ if (!process.env.API_KEY) {
 let ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 /**
- * Re-initializes the AI client with a new API key.
+ * Re-initializes the AI client with a new API key and optional endpoint.
  * If the provided key is empty, it reverts to the default environment variable key.
  * @param newApiKey The new API key to use.
+ * @param newApiEndpoint The custom API endpoint to use.
  */
-export const updateApiKey = (newApiKey?: string | null) => {
+export const updateApiKey = (newApiKey?: string | null, newApiEndpoint?: string | null) => {
   const keyToUse = newApiKey || process.env.API_KEY;
   if (!keyToUse) {
     console.error("Attempted to set an empty API key with no fallback environment variable.");
     return;
   }
   
-  // Re-create the client instance with the new or default key.
-  ai = new GoogleGenAI({ apiKey: keyToUse });
+  const options: { apiKey: string, clientOptions?: { apiEndpoint: string } } = {
+    apiKey: keyToUse,
+  };
+
+  if (newApiEndpoint && newApiEndpoint.trim()) {
+    try {
+      // Basic validation to ensure it's a valid URL format
+      const url = new URL(newApiEndpoint);
+      options.clientOptions = { apiEndpoint: url.toString() };
+      console.log(`Using custom API endpoint: ${options.clientOptions.apiEndpoint}`);
+    } catch (error) {
+      console.error("Invalid custom API endpoint URL provided:", newApiEndpoint, error);
+    }
+  }
+
+  // Re-create the client instance with the new or default key and optional endpoint.
+  ai = new GoogleGenAI(options);
 };
 
 
