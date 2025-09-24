@@ -1,19 +1,16 @@
 import React, { useState } from 'react';
 import { generateScriptSection } from '../services/geminiService';
 import { LoadingSpinner } from './LoadingSpinner';
-import { Character, GameEngine, FrameworkInputs } from '../types';
+import { Character, GameEngine, FrameworkInputs, OutlineItem } from '../types';
 import { useI18n } from '../i18n/I18nProvider';
 
 interface FullScriptGeneratorProps {
+  outline: OutlineItem[];
+  onOutlineChange: (outline: OutlineItem[]) => void;
   characters: Character[];
   onScriptGenerated: (content: string) => void;
   gameEngine: GameEngine;
   frameworkInputs: FrameworkInputs;
-}
-
-interface OutlineItem {
-    id: number;
-    description: string;
 }
 
 const PlusIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -28,8 +25,7 @@ const TrashIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
-export const FullScriptGenerator: React.FC<FullScriptGeneratorProps> = ({ characters, onScriptGenerated, gameEngine, frameworkInputs }) => {
-  const [outline, setOutline] = useState<OutlineItem[]>([]);
+export const FullScriptGenerator: React.FC<FullScriptGeneratorProps> = ({ outline, onOutlineChange, characters, onScriptGenerated, gameEngine, frameworkInputs }) => {
   const [generatingSectionId, setGeneratingSectionId] = useState<number | null>(null);
   const [generatedSectionIds, setGeneratedSectionIds] = useState<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -40,11 +36,11 @@ export const FullScriptGenerator: React.FC<FullScriptGeneratorProps> = ({ charac
       id: Date.now(), // Use timestamp for a simple unique ID
       description: ''
     };
-    setOutline(prev => [...prev, newSection]);
+    onOutlineChange([...outline, newSection]);
   };
 
   const handleRemoveSection = (idToRemove: number) => {
-    setOutline(prev => prev.filter(item => item.id !== idToRemove));
+    onOutlineChange(outline.filter(item => item.id !== idToRemove));
     setGeneratedSectionIds(prev => {
       const newSet = new Set(prev);
       newSet.delete(idToRemove);
@@ -54,7 +50,7 @@ export const FullScriptGenerator: React.FC<FullScriptGeneratorProps> = ({ charac
 
   const handleClearAll = () => {
     if (window.confirm("Are you sure you want to clear all script sections?")) {
-      setOutline([]);
+      onOutlineChange([]);
       setGeneratedSectionIds(new Set());
       setError(null);
     }
@@ -78,7 +74,7 @@ export const FullScriptGenerator: React.FC<FullScriptGeneratorProps> = ({ charac
   };
   
   const handleOutlineChange = (id: number, newDescription: string) => {
-      setOutline(prev => prev.map(item => item.id === id ? { ...item, description: newDescription } : item));
+      onOutlineChange(outline.map(item => item.id === id ? { ...item, description: newDescription } : item));
       // If user edits a generated section, mark it as not-generated so they can generate again
       if (generatedSectionIds.has(id)) {
           setGeneratedSectionIds(prev => {

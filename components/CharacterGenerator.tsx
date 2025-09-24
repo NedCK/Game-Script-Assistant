@@ -5,6 +5,8 @@ import { LoadingSpinner } from './LoadingSpinner';
 import { useI18n } from '../i18n/I18nProvider';
 
 interface CharacterGeneratorProps {
+  prompts: string[];
+  onPromptsChange: (prompts: string[]) => void;
   onCharactersGenerated: (characters: Character[]) => void;
   gameEngine: GameEngine;
   frameworkInputs: FrameworkInputs;
@@ -23,8 +25,7 @@ const MinusIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 
-export const CharacterGenerator: React.FC<CharacterGeneratorProps> = ({ onCharactersGenerated, gameEngine, frameworkInputs }) => {
-  const [prompts, setPrompts] = useState<string[]>(['']);
+export const CharacterGenerator: React.FC<CharacterGeneratorProps> = ({ prompts, onPromptsChange, onCharactersGenerated, gameEngine, frameworkInputs }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { t } = useI18n();
@@ -32,15 +33,15 @@ export const CharacterGenerator: React.FC<CharacterGeneratorProps> = ({ onCharac
   const handlePromptChange = (index: number, value: string) => {
     const newPrompts = [...prompts];
     newPrompts[index] = value;
-    setPrompts(newPrompts);
+    onPromptsChange(newPrompts);
   };
 
   const handleAddPrompt = () => {
-    setPrompts(prev => [...prev, '']);
+    onPromptsChange([...prompts, '']);
   };
 
   const handleRemovePrompt = (index: number) => {
-    setPrompts(prev => prev.filter((_, i) => i !== index));
+    onPromptsChange(prompts.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,7 +54,6 @@ export const CharacterGenerator: React.FC<CharacterGeneratorProps> = ({ onCharac
     try {
       const newCharacters = await generateCharacter(validPrompts, gameEngine, frameworkInputs);
       onCharactersGenerated(newCharacters);
-      setPrompts(['']);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');
     } finally {

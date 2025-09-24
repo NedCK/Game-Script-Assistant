@@ -23,6 +23,17 @@ export interface FrameworkInputs {
   experience: string;
 }
 
+export interface OutlineItem {
+  id: number;
+  description: string;
+}
+
+export interface GeneratorInputs {
+  characterPrompts: string[];
+  scenePrompts: string[];
+  fullScriptOutline: OutlineItem[];
+}
+
 export interface SavedProject {
   version: number;
   projectName: string;
@@ -31,6 +42,7 @@ export interface SavedProject {
   scriptPieces: ScriptPiece[];
   gameEngine: GameEngine;
   language: 'en' | 'zh';
+  generatorInputs?: GeneratorInputs;
 }
 
 export type SaveStatus = 'saved' | 'unsaved' | 'saving';

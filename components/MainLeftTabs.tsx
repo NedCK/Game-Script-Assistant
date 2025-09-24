@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { GameDesignFramework } from './GameDesignFramework';
 import { GeneratorTabs } from './GeneratorTabs';
 import { useI18n } from '../i18n/I18nProvider';
-import { Character, GameEngine, FrameworkInputs } from '../types';
+import { Character, GameEngine, FrameworkInputs, GeneratorInputs, OutlineItem } from '../types';
 
 type ActiveTab = 'design' | 'content';
 
@@ -15,6 +15,10 @@ interface MainLeftTabsProps {
     onScriptGenerated: (content: string) => void;
     characters: Character[];
     gameEngine: GameEngine;
+    generatorInputs: GeneratorInputs;
+    onCharacterPromptsChange: (prompts: string[]) => void;
+    onScenePromptsChange: (prompts: string[]) => void;
+    onFullScriptOutlineChange: (outline: OutlineItem[]) => void;
 }
 
 export const MainLeftTabs: React.FC<MainLeftTabsProps> = (props) => {
@@ -62,6 +66,10 @@ export const MainLeftTabs: React.FC<MainLeftTabsProps> = (props) => {
                             characters={props.characters}
                             gameEngine={props.gameEngine}
                             frameworkInputs={props.frameworkInputs}
+                            generatorInputs={props.generatorInputs}
+                            onCharacterPromptsChange={props.onCharacterPromptsChange}
+                            onScenePromptsChange={props.onScenePromptsChange}
+                            onFullScriptOutlineChange={props.onFullScriptOutlineChange}
                         />
                     </div>
                 )}

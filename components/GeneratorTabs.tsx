@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Character, GameEngine, FrameworkInputs } from '../types';
+import { Character, GameEngine, FrameworkInputs, GeneratorInputs, OutlineItem } from '../types';
 import { CharacterGenerator } from './CharacterGenerator';
 import { SceneGenerator } from './SceneGenerator';
 import { FullScriptGenerator } from './FullScriptGenerator';
@@ -14,6 +14,10 @@ interface GeneratorTabsProps {
     characters: Character[];
     gameEngine: GameEngine;
     frameworkInputs: FrameworkInputs;
+    generatorInputs: GeneratorInputs;
+    onCharacterPromptsChange: (prompts: string[]) => void;
+    onScenePromptsChange: (prompts: string[]) => void;
+    onFullScriptOutlineChange: (outline: OutlineItem[]) => void;
 }
 
 export const GeneratorTabs: React.FC<GeneratorTabsProps> = (props) => {
@@ -48,6 +52,8 @@ export const GeneratorTabs: React.FC<GeneratorTabsProps> = (props) => {
             <div className="pt-6">
                 {activeTab === 'character' && (
                     <CharacterGenerator
+                        prompts={props.generatorInputs.characterPrompts}
+                        onPromptsChange={props.onCharacterPromptsChange}
                         onCharactersGenerated={props.onCharactersGenerated}
                         gameEngine={props.gameEngine}
                         frameworkInputs={props.frameworkInputs}
@@ -55,6 +61,8 @@ export const GeneratorTabs: React.FC<GeneratorTabsProps> = (props) => {
                 )}
                 {activeTab === 'scene' && (
                     <SceneGenerator
+                        prompts={props.generatorInputs.scenePrompts}
+                        onPromptsChange={props.onScenePromptsChange}
                         onSceneGenerated={props.onSceneGenerated}
                         gameEngine={props.gameEngine}
                         frameworkInputs={props.frameworkInputs}
@@ -62,6 +70,8 @@ export const GeneratorTabs: React.FC<GeneratorTabsProps> = (props) => {
                 )}
                 {activeTab === 'fullScript' && (
                     <FullScriptGenerator
+                        outline={props.generatorInputs.fullScriptOutline}
+                        onOutlineChange={props.onFullScriptOutlineChange}
                         characters={props.characters}
                         onScriptGenerated={props.onScriptGenerated}
                         gameEngine={props.gameEngine}

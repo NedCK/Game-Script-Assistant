@@ -4,7 +4,7 @@ import { Header } from './components/Header';
 import { SettingsModal } from './components/SettingsModal';
 import { ProjectManager } from './components/ProjectManager';
 import { I18nProvider } from './i18n/I18nProvider';
-import { Character, ScriptPiece, GameEngine, FrameworkInputs, SavedProject, SaveStatus } from './types';
+import { Character, ScriptPiece, GameEngine, FrameworkInputs, SavedProject, SaveStatus, GeneratorInputs, OutlineItem } from './types';
 import { ScriptEditor } from './components/ScriptEditor';
 import { MainLeftTabs } from './components/MainLeftTabs';
 import { translateToChinese, updateApiKey } from './services/geminiService';
@@ -19,6 +19,12 @@ const initialFrameworkInputs: FrameworkInputs = {
   experience: '',
 };
 
+const initialGeneratorInputs: GeneratorInputs = {
+  characterPrompts: [''],
+  scenePrompts: [''],
+  fullScriptOutline: [],
+};
+
 const APP_VERSION = 1;
 const LOCAL_STORAGE_KEY = 'gameScriptProject';
 
@@ -30,6 +36,7 @@ const getInitialState = (): SavedProject => ({
   scriptPieces: [],
   gameEngine: 'unity',
   language: 'en',
+  generatorInputs: initialGeneratorInputs,
 });
 
 
@@ -41,6 +48,7 @@ function App() {
   const [language, setLanguage] = useState<'en' | 'zh'>('zh');
   const [projectName, setProjectName] = useState('我的超棒游戏');
   const [frameworkInputs, setFrameworkInputs] = useState<FrameworkInputs>(initialFrameworkInputs);
+  const [generatorInputs, setGeneratorInputs] = useState<GeneratorInputs>(initialGeneratorInputs);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [customApiKey, setCustomApiKey] = useState<string>(() => sessionStorage.getItem('customApiKey') || '');
@@ -78,6 +86,7 @@ function App() {
       setScriptPieces(data.scriptPieces || []);
       setGameEngine(data.gameEngine || 'unity');
       setLanguage(data.language || 'en');
+      setGeneratorInputs(data.generatorInputs || initialGeneratorInputs);
   };
 
   // Auto-load from localStorage on initial mount
@@ -115,6 +124,7 @@ function App() {
             scriptPieces,
             gameEngine,
             language,
+            generatorInputs,
         };
         try {
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(projectData));
@@ -128,7 +138,7 @@ function App() {
     return () => {
         clearTimeout(handler);
     };
-  }, [projectName, frameworkInputs, characters, scriptPieces, gameEngine, language]);
+  }, [projectName, frameworkInputs, characters, scriptPieces, gameEngine, language, generatorInputs]);
 
   const handleCharactersGenerated = useCallback((newCharacters: Character[]) => {
     setCharacters(prev => [...prev, ...newCharacters]);
@@ -138,10 +148,12 @@ function App() {
       return { id: Date.now() + index, type: 'scene' as const, content };
     });
     setScriptPieces(prev => [...prev, ...newScriptPieces]);
+    setGeneratorInputs(prev => ({ ...prev, characterPrompts: [''] }));
   }, []);
 
   const handleSceneGenerated = useCallback((content: string) => {
     setScriptPieces(prev => [...prev, { id: Date.now(), type: 'scene', content }]);
+    setGeneratorInputs(prev => ({ ...prev, scenePrompts: [''] }));
   }, []);
 
   const handleScriptGenerated = useCallback((content: string) => {
@@ -157,6 +169,18 @@ function App() {
     setFrameworkInputs(prev => ({ ...prev, [section]: value }));
   }, []);
 
+  const handleCharacterPromptsChange = useCallback((prompts: string[]) => {
+    setGeneratorInputs(prev => ({ ...prev, characterPrompts: prompts }));
+  }, []);
+
+  const handleScenePromptsChange = useCallback((prompts: string[]) => {
+    setGeneratorInputs(prev => ({ ...prev, scenePrompts: prompts }));
+  }, []);
+
+  const handleFullScriptOutlineChange = useCallback((outline: OutlineItem[]) => {
+    setGeneratorInputs(prev => ({ ...prev, fullScriptOutline: outline }));
+  }, []);
+
   const handleSaveProject = useCallback(() => {
     const projectData: SavedProject = {
       version: APP_VERSION,
@@ -166,6 +190,7 @@ function App() {
       scriptPieces,
       gameEngine,
       language,
+      generatorInputs,
     };
     const jsonString = JSON.stringify(projectData, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
@@ -182,7 +207,7 @@ function App() {
     localStorage.setItem(LOCAL_STORAGE_KEY, jsonString);
     setSaveStatus('saved');
 
-  }, [projectName, frameworkInputs, characters, scriptPieces, gameEngine, language]);
+  }, [projectName, frameworkInputs, characters, scriptPieces, gameEngine, language, generatorInputs]);
 
   const handleLoadProjectTrigger = () => {
     fileInputRef.current?.click();
@@ -297,6 +322,10 @@ function App() {
                 onScriptGenerated={handleScriptGenerated}
                 characters={characters}
                 gameEngine={gameEngine}
+                generatorInputs={generatorInputs}
+                onCharacterPromptsChange={handleCharacterPromptsChange}
+                onScenePromptsChange={handleScenePromptsChange}
+                onFullScriptOutlineChange={handleFullScriptOutlineChange}
               />
               <CharacterList characters={characters} />
             </div>

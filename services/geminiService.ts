@@ -203,7 +203,12 @@ Generate a single JSON object. This object must contain a single key, "character
         throw new Error('API returned an empty response.');
     }
     
-    const parsedData = JSON.parse(textResponse);
+    // FIX: Clean the response to remove markdown fences before parsing.
+    const jsonString = textResponse
+      .replace(/^```json\s*/, '')
+      .replace(/```$/, '');
+
+    const parsedData = JSON.parse(jsonString);
     if (!parsedData.characters || !Array.isArray(parsedData.characters)) {
       throw new Error("API returned an invalid format. Expected an object with a 'characters' array.");
     }

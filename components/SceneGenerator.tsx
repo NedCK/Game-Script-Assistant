@@ -5,6 +5,8 @@ import { GameEngine, FrameworkInputs } from '../types';
 import { useI18n } from '../i18n/I18nProvider';
 
 interface SceneGeneratorProps {
+  prompts: string[];
+  onPromptsChange: (prompts: string[]) => void;
   onSceneGenerated: (content: string) => void;
   gameEngine: GameEngine;
   frameworkInputs: FrameworkInputs;
@@ -22,8 +24,7 @@ const MinusIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
-export const SceneGenerator: React.FC<SceneGeneratorProps> = ({ onSceneGenerated, gameEngine, frameworkInputs }) => {
-  const [prompts, setPrompts] = useState<string[]>(['']);
+export const SceneGenerator: React.FC<SceneGeneratorProps> = ({ prompts, onPromptsChange, onSceneGenerated, gameEngine, frameworkInputs }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { t } = useI18n();
@@ -31,15 +32,15 @@ export const SceneGenerator: React.FC<SceneGeneratorProps> = ({ onSceneGenerated
   const handlePromptChange = (index: number, value: string) => {
     const newPrompts = [...prompts];
     newPrompts[index] = value;
-    setPrompts(newPrompts);
+    onPromptsChange(newPrompts);
   };
 
   const handleAddPrompt = () => {
-    setPrompts(prev => [...prev, '']);
+    onPromptsChange([...prompts, '']);
   };
 
   const handleRemovePrompt = (index: number) => {
-    setPrompts(prev => prev.filter((_, i) => i !== index));
+    onPromptsChange(prompts.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,7 +53,6 @@ export const SceneGenerator: React.FC<SceneGeneratorProps> = ({ onSceneGenerated
     try {
       const sceneContent = await generateScene(validPrompts, gameEngine, frameworkInputs);
       onSceneGenerated(sceneContent);
-      setPrompts(['']);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');
     } finally {
