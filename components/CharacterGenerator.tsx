@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { generateCharacter } from '../services/geminiService';
+// FIX: Correctly import generateCharacters.
+import { generateCharacters } from '../services/geminiService';
+// FIX: The FrameworkInputs type will be available once types.ts is updated.
 import { Character, GameEngine, FrameworkInputs } from '../types';
 import { LoadingSpinner } from './LoadingSpinner';
 import { useI18n } from '../i18n/I18nProvider';
@@ -52,7 +54,9 @@ export const CharacterGenerator: React.FC<CharacterGeneratorProps> = ({ prompts,
     setIsLoading(true);
     setError(null);
     try {
-      const newCharacters = await generateCharacter(validPrompts, gameEngine, frameworkInputs);
+      // FIX: Use generateCharacters with correct arguments and add IDs to the result.
+      const newCharacterData = await generateCharacters(validPrompts, []);
+      const newCharacters = newCharacterData.map(c => ({ ...c, id: crypto.randomUUID() }));
       onCharactersGenerated(newCharacters);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');

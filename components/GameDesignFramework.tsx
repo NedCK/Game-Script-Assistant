@@ -1,8 +1,10 @@
 import React, { useState, useCallback } from 'react';
+// FIX: The FrameworkInputs type will be available once types.ts is updated.
 import { FrameworkInputs } from '../types';
-import { useI18n } from '../i18n/I18nProvider';
+// FIX: The brainstormFrameworkIdea function will be available once geminiService.ts is updated.
 import { brainstormFrameworkIdea } from '../services/geminiService';
 import { LoadingSpinner } from './LoadingSpinner';
+import { useI18n } from '../i18n/I18nProvider';
 
 interface GameDesignFrameworkProps {
     inputs: FrameworkInputs;
@@ -20,7 +22,8 @@ type FrameworkSection = keyof FrameworkInputs;
 
 export const GameDesignFramework: React.FC<GameDesignFrameworkProps> = ({ inputs, onInputChange, onTranslateSection }) => {
     const { t } = useI18n();
-    const [openSection, setOpenSection] = useState<FrameworkSection>('theme');
+    // FIX: Allow null for openSection state to properly toggle sections off.
+    const [openSection, setOpenSection] = useState<FrameworkSection | null>('theme');
     const [loadingSection, setLoadingSection] = useState<FrameworkSection | null>(null);
     const [translatingSection, setTranslatingSection] = useState<FrameworkSection | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -70,7 +73,8 @@ export const GameDesignFramework: React.FC<GameDesignFrameworkProps> = ({ inputs
                 <div key={id} className="bg-gray-900/50 rounded-lg">
                     <button
                         className="w-full flex justify-between items-center text-left p-4"
-                        onClick={() => setOpenSection(openSection === id ? '' as FrameworkSection : id)}
+                        // FIX: Use null to close the section, preventing a type error.
+                        onClick={() => setOpenSection(openSection === id ? null : id)}
                         aria-expanded={openSection === id}
                     >
                         <div>
