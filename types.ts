@@ -25,6 +25,7 @@ export interface SavedProject {
   plotPoints: PlotPoint[];
   gameEngine: GameEngine;
   language: 'en' | 'zh';
+  apiKey?: string;
 }
 
 export type SaveStatus = 'saved' | 'unsaved' | 'saving';

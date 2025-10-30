@@ -7,6 +7,8 @@ interface SettingsModalProps {
   onClose: () => void;
   gameEngine: GameEngine;
   onGameEngineChange: (engine: GameEngine) => void;
+  apiKey: string;
+  onApiKeyChange: (key: string) => void;
   appVersion: string;
 }
 
@@ -21,6 +23,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   gameEngine,
   onGameEngineChange,
+  apiKey,
+  onApiKeyChange,
   appVersion,
 }) => {
   const { t } = useI18n();
@@ -45,9 +49,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </button>
         </div>
         
-        <div className="p-6 space-y-6">
-          {/* Game Engine Setting */}
+        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+          {/* API Key Setting */}
           <div>
+            <label htmlFor="apiKey" className="block text-sm font-medium text-gray-300 mb-2">
+              {t('settingsApiKeyLabel')}
+            </label>
+            <input
+              id="apiKey"
+              type="password"
+              value={apiKey}
+              onChange={(e) => onApiKeyChange(e.target.value)}
+              placeholder={t('settingsApiKeyPlaceholder')}
+              className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition font-mono"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+                {t('settingsApiKeyDescription')}{' '}
+                <a 
+                    href="https://aistudio.google.com/app/apikey" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-teal-400 hover:text-teal-300 underline"
+                >
+                    {t('settingsApiKeyLink')}
+                </a>
+            </p>
+          </div>
+
+          {/* Game Engine Setting */}
+          <div className="border-t border-gray-700 pt-6">
             <label htmlFor="gameEngine" className="block text-sm font-medium text-gray-300 mb-2">
               {t('settingsGameEngineLabel')}
             </label>
@@ -107,7 +137,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         </div>
         
-        <div className="bg-gray-800/50 px-4 py-3 text-right rounded-b-xl">
+        <div className="bg-gray-800/50 px-4 py-3 text-right rounded-b-xl border-t border-gray-700">
           <button
             onClick={onClose}
             className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200"

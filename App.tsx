@@ -6,6 +6,7 @@ import { I18nProvider } from './i18n/I18nProvider';
 import { Character, GameEngine, SavedProject, SaveStatus, PlotPoint } from './types';
 import { CharacterManager } from './components/CharacterList';
 import { Storyboard } from './components/ScriptEditor';
+import { initializeAi } from './services/geminiService';
 
 const getInitialState = (): SavedProject => ({
   version: 2,
@@ -14,6 +15,7 @@ const getInitialState = (): SavedProject => ({
   plotPoints: [],
   gameEngine: 'unity',
   language: 'en',
+  apiKey: '',
 });
 
 const APP_VERSION = 2;
@@ -26,6 +28,7 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [language, setLanguage] = useState<'en' | 'zh'>('en');
   const [projectName, setProjectName] = useState('My Awesome Game');
+  const [apiKey, setApiKey] = useState('');
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isInitialLoad = useRef(true);
@@ -43,6 +46,7 @@ function App() {
       setPlotPoints(data.plotPoints || []);
       setGameEngine(data.gameEngine || 'unity');
       setLanguage(data.language || 'en');
+      setApiKey(data.apiKey || '');
   };
 
   useEffect(() => {
@@ -76,6 +80,7 @@ function App() {
             plotPoints,
             gameEngine,
             language,
+            apiKey,
         };
         try {
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(projectData));
@@ -87,7 +92,11 @@ function App() {
     }, 1500);
 
     return () => clearTimeout(handler);
-  }, [projectName, characters, plotPoints, gameEngine, language]);
+  }, [projectName, characters, plotPoints, gameEngine, language, apiKey]);
+
+  useEffect(() => {
+    initializeAi(apiKey);
+  }, [apiKey]);
 
   const handleSaveProject = useCallback(() => {
     const projectData: SavedProject = {
@@ -97,6 +106,7 @@ function App() {
       plotPoints,
       gameEngine,
       language,
+      apiKey,
     };
     const jsonString = JSON.stringify(projectData, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
@@ -111,7 +121,7 @@ function App() {
     
     localStorage.setItem(LOCAL_STORAGE_KEY, jsonString);
     setSaveStatus('saved');
-  }, [projectName, characters, plotPoints, gameEngine, language]);
+  }, [projectName, characters, plotPoints, gameEngine, language, apiKey]);
 
   const handleLoadProjectTrigger = () => {
     fileInputRef.current?.click();
@@ -199,6 +209,8 @@ function App() {
           onClose={() => setIsSettingsOpen(false)}
           gameEngine={gameEngine}
           onGameEngineChange={setGameEngine}
+          apiKey={apiKey}
+          onApiKeyChange={setApiKey}
           appVersion={APP_VERSION.toString()}
         />
       </div>

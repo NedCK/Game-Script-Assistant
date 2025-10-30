@@ -2,13 +2,27 @@ import { GoogleGenAI, Type, GenerateContentResponse, HarmCategory, HarmBlockThre
 // FIX: Add FrameworkInputs to imports.
 import { Character, GameEngine, PlotPoint, FrameworkInputs } from '../types';
 
-if (!process.env.API_KEY || process.env.API_KEY.trim() === '') {
-  throw new Error("API key is missing or empty. Please set the API_KEY environment variable.");
-}
+let ai: GoogleGenAI | null = null;
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+export const initializeAi = (apiKey?: string) => {
+  const finalApiKey = apiKey || process.env.API_KEY;
+  if (!finalApiKey || finalApiKey.trim() === '') {
+    console.warn("API key is not set. AI features will not work.");
+    ai = null;
+    return;
+  }
+  ai = new GoogleGenAI({ apiKey: finalApiKey });
+  console.log("Gemini AI client initialized.");
+};
+
+// Initialize with default on module load
+initializeAi(process.env.API_KEY);
+
 
 const withRetry = async <T>(apiCall: () => Promise<T>, maxRetries = 4, initialDelay = 1500): Promise<T> => {
+    if (!ai) {
+      throw new Error("AI Client not initialized. Please set an API key in the settings.");
+    }
     let lastError: unknown;
     for (let i = 0; i < maxRetries; i++) {
         try {
@@ -59,6 +73,7 @@ const characterListSchema = {
 };
 
 export const generateCharacters = async (prompts: string[], existingCharacters: Character[]): Promise<Omit<Character, 'id'>[]> => {
+  if (!ai) throw new Error("AI Client not initialized. Please set an API key in the settings.");
   if (prompts.length === 0) return [];
   try {
     const characterConcepts = prompts.map((p, i) => `Concept ${i + 1}: ${p}`).join('\n');
@@ -120,6 +135,7 @@ export const generateScriptForPlotPoint = async (
     charactersInScene: Character[], 
     gameEngine: GameEngine
 ): Promise<string> => {
+    if (!ai) throw new Error("AI Client not initialized. Please set an API key in the settings.");
     try {
         const characterProfiles = charactersInScene.map(c => 
             `Name: ${c.name}\nAppearance: ${c.appearance}\nBackstory: ${c.backstory}\nRelationships: ${c.relationships}`
@@ -163,6 +179,7 @@ NOW, WRITE THE SCRIPT FOR THIS SCENE ONLY. Do not add introductory or concluding
 }
 
 export const translateToChinese = async (textToTranslate: string): Promise<string> => {
+  if (!ai) throw new Error("AI Client not initialized. Please set an API key in the settings.");
   if (!textToTranslate?.trim()) {
     return '';
   }
@@ -196,6 +213,7 @@ export const brainstormFrameworkIdea = async (
     currentValue: string,
     allInputs: FrameworkInputs
 ): Promise<string> => {
+    if (!ai) throw new Error("AI Client not initialized. Please set an API key in the settings.");
     try {
         const context = (Object.entries(allInputs) as [keyof FrameworkInputs, string][])
             .filter(([key, value]) => key !== section && value.trim())
@@ -236,6 +254,7 @@ export const generateScene = async (
     gameEngine: GameEngine,
     frameworkInputs: FrameworkInputs
 ): Promise<string> => {
+    if (!ai) throw new Error("AI Client not initialized. Please set an API key in the settings.");
     try {
         const sceneConcepts = prompts.map((p, i) => `Concept ${i + 1}: ${p}`).join('\n');
         
@@ -285,6 +304,7 @@ export const generateScriptSection = async (
     gameEngine: GameEngine,
     frameworkInputs: FrameworkInputs
 ): Promise<string> => {
+    if (!ai) throw new Error("AI Client not initialized. Please set an API key in the settings.");
     try {
         const characterProfiles = characters.map(c => 
             `Name: ${c.name}\nAppearance: ${c.appearance}\nBackstory: ${c.backstory}\nRelationships: ${c.relationships}`
