@@ -48,7 +48,9 @@ export const CharacterManager: React.FC<CharacterManagerProps> = ({ characters, 
     }
   };
 
-  const handleDeleteCharacter = (id: string) => {
+  const handleDeleteCharacter = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (window.confirm(t('confirmCharacterDelete'))) {
       onCharactersChange(characters.filter(c => c.id !== id));
     }
@@ -68,7 +70,8 @@ export const CharacterManager: React.FC<CharacterManagerProps> = ({ characters, 
           characters.map((char) => (
              <div key={char.id} className="bg-gray-900/50 rounded-lg">
                 <button
-                    className="w-full flex justify-between items-center text-left p-3"
+                    type="button"
+                    className="w-full flex justify-between items-center text-left p-3 focus:outline-none focus:ring-2 focus:ring-teal-500/50 rounded-t-lg"
                     onClick={() => setOpenCharacterId(openCharacterId === char.id ? null : char.id)}
                 >
                     <span className="font-bold text-gray-100">{char.name}</span>
@@ -89,7 +92,12 @@ export const CharacterManager: React.FC<CharacterManagerProps> = ({ characters, 
                             <p className="text-sm text-gray-300 mt-1">{char.relationships}</p>
                         </div>
                         <div className="text-right">
-                           <button onClick={() => handleDeleteCharacter(char.id)} className="text-red-400 hover:text-red-300 text-xs font-semibold">
+                           <button 
+                                type="button"
+                                onClick={(e) => handleDeleteCharacter(e, char.id)} 
+                                className="text-red-400 hover:text-red-300 text-xs font-semibold flex items-center justify-end gap-1 ml-auto"
+                            >
+                                <TrashIcon className="w-4 h-4" />
                                 {t('deleteButton')}
                            </button>
                         </div>
