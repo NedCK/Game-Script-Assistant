@@ -9,7 +9,7 @@ import { Storyboard } from './components/ScriptEditor';
 import { initializeAi } from './services/geminiService';
 
 const getInitialState = (): SavedProject => ({
-  version: 2,
+  version: 3,
   projectName: 'My Awesome Game',
   characters: [],
   plotPoints: [],
@@ -18,8 +18,8 @@ const getInitialState = (): SavedProject => ({
   apiKey: '',
 });
 
-const APP_VERSION = 2;
-const LOCAL_STORAGE_KEY = 'gameScriptProject_v2';
+const APP_VERSION = 3;
+const LOCAL_STORAGE_KEY = 'gameScriptProject_v3';
 
 function App() {
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -34,8 +34,9 @@ function App() {
   const isInitialLoad = useRef(true);
 
   const loadProjectData = (data: SavedProject) => {
-      if (!data.version || data.version < APP_VERSION) {
-        throw new Error("This project file is from an older version of the app and cannot be loaded. Please start a new project.");
+      // Allow migrating v2 to v3 implicitly as types are compatible
+      if (!data.version || data.version < 2) {
+        throw new Error("This project file is from a legacy version and cannot be loaded.");
       }
       if (data.version > APP_VERSION) {
         throw new Error("This project file was created with a newer version of the app and cannot be loaded.");

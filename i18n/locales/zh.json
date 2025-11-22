@@ -56,7 +56,7 @@
   "statusUnsaved": "未保存的更改",
   
   "settingsAboutTitle": "关于此应用",
-  "settingsAboutDesc": "Gen-AI Scriptwriter 是一款由 AI 驱动的工具，旨在帮助游戏开发者和编剧创作引人入胜的游戏剧本。由 Google Gemini API 提供技术支持。",
+  "settingsAboutDesc": "Gen-AI Scriptwriter 是一款由 AI 驱动的工具，旨在帮助游戏开发者和编剧创作引人入胜的游戏剧本。由 Google Gemini 3.0 Pro 提供技术支持。",
   "settingsAboutVersion": "版本",
   "settingsAboutLink": "了解更多关于 Google AI",
   "settingsHowToUseTitle": "使用说明",

@@ -56,7 +56,7 @@
   "statusUnsaved": "Unsaved changes",
 
   "settingsAboutTitle": "About This App",
-  "settingsAboutDesc": "Gen-AI Scriptwriter is an AI-powered tool to assist game developers and writers in creating compelling game scripts. Powered by the Google Gemini API.",
+  "settingsAboutDesc": "Gen-AI Scriptwriter is an AI-powered tool to assist game developers and writers in creating compelling game scripts. Powered by the Google Gemini 3.0 Pro.",
   "settingsAboutVersion": "Version",
   "settingsAboutLink": "Learn more about Google AI",
   "settingsHowToUseTitle": "How to Use",

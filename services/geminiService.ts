@@ -1,8 +1,9 @@
 import { GoogleGenAI, Type, GenerateContentResponse, HarmCategory, HarmBlockThreshold } from "@google/genai";
-// FIX: Add FrameworkInputs to imports.
 import { Character, GameEngine, PlotPoint, FrameworkInputs } from '../types';
 
 let ai: GoogleGenAI | null = null;
+
+const MODEL_NAME = "gemini-3-pro-preview";
 
 export const initializeAi = (apiKey?: string) => {
   const finalApiKey = apiKey || process.env.API_KEY;
@@ -12,7 +13,7 @@ export const initializeAi = (apiKey?: string) => {
     return;
   }
   ai = new GoogleGenAI({ apiKey: finalApiKey });
-  console.log("Gemini AI client initialized.");
+  console.log(`Gemini AI client initialized with model: ${MODEL_NAME}`);
 };
 
 // Initialize with default on module load
@@ -79,7 +80,7 @@ export const generateCharacters = async (prompts: string[], existingCharacters: 
     const characterConcepts = prompts.map((p, i) => `Concept ${i + 1}: ${p}`).join('\n');
     const existingNames = existingCharacters.map(c => c.name).join(', ') || 'None so far.';
 
-    const fullPrompt = `You are an expert narrative designer for video games.
+    const systemInstruction = `You are an expert narrative designer for video games.
 Based on a list of raw character concepts, your task is to refine them into CONCISE character profiles suitable for script generation.
 For each character, you MUST ONLY provide these four things:
 1. name: Their name.
@@ -87,29 +88,26 @@ For each character, you MUST ONLY provide these four things:
 3. backstory: A brief background story.
 4. relationships: A description of their relationships with the OTHER characters being generated in this batch, and optionally with existing characters.
 
-Do NOT include personality traits or motivations as separate fields.
+Do NOT include personality traits or motivations as separate fields.`;
 
---- EXISTING CHARACTERS IN THE STORY (for context) ---
+    const userContent = `--- EXISTING CHARACTERS IN THE STORY (for context) ---
 ${existingNames}
 
 --- RAW CHARACTER CONCEPTS TO GENERATE ---
-${characterConcepts}
----
-
-Generate a single JSON object. This object must contain a single key, "characters", which is an array of character profile objects. Each character object must strictly follow the provided schema.
-`;
+${characterConcepts}`;
     
-    const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: fullPrompt,
+    const response = await withRetry<GenerateContentResponse>(() => ai!.models.generateContent({
+      model: MODEL_NAME,
+      contents: userContent,
       config: {
+        systemInstruction,
         responseMimeType: "application/json",
         responseSchema: characterListSchema,
         safetySettings,
       },
     }));
 
-    const textResponse = response.text.trim();
+    const textResponse = response.text?.trim();
     if (!textResponse) throw new Error('API returned an empty response.');
     
     const jsonString = textResponse.replace(/^```json\s*/, '').replace(/```$/, '');
@@ -147,30 +145,30 @@ export const generateScriptForPlotPoint = async (
             godot: "e.g., [GODOT_SIGNAL: emit_signal('player_spoke')], [ANIMATION_PLAYER: play('character_wave')]"
         }
 
-        const fullPrompt = `You are a professional game scriptwriter creating a script for a game made in the ${gameEngine} engine.
-Your task is to write a script for a single scene based on the details provided. Format the output like a professional screenplay. Include scene descriptions, character actions, and dialogue. Where appropriate, include engine-specific cues for implementation (${engineSpecificCues[gameEngine]}).
+        const systemInstruction = `You are a professional game scriptwriter creating a script for a game made in the ${gameEngine} engine.
+Your task is to write a script for a single scene based on the details provided. Format the output like a professional screenplay. Include scene descriptions, character actions, and dialogue. Where appropriate, include engine-specific cues for implementation (${engineSpecificCues[gameEngine]}).`;
 
---- SCENE DETAILS ---
+        const userContent = `--- SCENE DETAILS ---
 Title: ${plotPoint.title}
 Setting: ${plotPoint.setting}
 Mood: ${plotPoint.mood}
 Scene Summary / Key Events: ${plotPoint.summary}
----
-CHARACTERS IN THIS SCENE:
+
+--- CHARACTERS IN THIS SCENE ---
 ${characterProfiles.length > 0 ? characterProfiles : 'No specific characters provided for this scene.'}
+
 ---
+NOW, WRITE THE SCRIPT FOR THIS SCENE ONLY. Do not add introductory or concluding remarks.`;
 
-NOW, WRITE THE SCRIPT FOR THIS SCENE ONLY. Do not add introductory or concluding remarks.
-`;
-
-        const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: fullPrompt,
+        const response = await withRetry<GenerateContentResponse>(() => ai!.models.generateContent({
+            model: MODEL_NAME,
+            contents: userContent,
             config: {
+                systemInstruction,
                 safetySettings,
             },
         }));
-        return response.text;
+        return response.text || "";
 
     } catch(error) {
         console.error("Error generating script section:", error);
@@ -184,30 +182,30 @@ export const translateToChinese = async (textToTranslate: string): Promise<strin
     return '';
   }
   try {
-    const prompt = `You are an expert translator. Your task is to translate the following English text into Simplified Chinese.
+    const systemInstruction = `You are an expert translator. Your task is to translate the following English text into Simplified Chinese.
 - Preserve the original formatting (e.g., markdown, screenplay format, JSON structure).
 - Do not add any extra commentary, explanations, or introductory phrases like "Here is the translation:".
-- Provide only the direct translation.
+- Provide only the direct translation.`;
 
---- TEXT TO TRANSLATE ---
+    const userContent = `--- TEXT TO TRANSLATE ---
 ${textToTranslate}
 --- END OF TEXT ---`;
 
-    const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
+    const response = await withRetry<GenerateContentResponse>(() => ai!.models.generateContent({
+      model: MODEL_NAME,
+      contents: userContent,
       config: {
+        systemInstruction,
         safetySettings,
       },
     }));
-    return response.text;
+    return response.text || "";
   } catch (error) {
     console.error("Error translating to Chinese:", error);
     throw new Error("Failed to translate the text to Chinese.");
   }
 };
 
-// FIX: Add missing function definitions.
 export const brainstormFrameworkIdea = async (
     section: keyof FrameworkInputs,
     currentValue: string,
@@ -220,29 +218,28 @@ export const brainstormFrameworkIdea = async (
             .map(([key, value]) => `--- ${key.toUpperCase()} ---\n${value}`)
             .join('\n\n');
 
-        const prompt = `You are a creative game design consultant.
+        const systemInstruction = `You are a creative game design consultant.
 A user is working on a game design document and needs help brainstorming ideas for the "${section}" section.
+Your task is to provide 2-3 CONCISE and CREATIVE new ideas to expand upon the "${section}" section.
+The ideas should be complementary to the existing design document.
+Do not repeat existing ideas. Format your response as a bulleted list. Do not add any introductory or concluding remarks.`;
 
---- CURRENT IDEAS FOR "${section.toUpperCase()}" ---
+        const userContent = `--- CURRENT IDEAS FOR "${section.toUpperCase()}" ---
 ${currentValue || 'No ideas yet.'}
 
 --- OTHER DESIGN DOCUMENT SECTIONS (for context) ---
-${context || 'No other context provided.'}
+${context || 'No other context provided.'}`;
 
-Your task is to provide 2-3 CONCISE and CREATIVE new ideas to expand upon the "${section}" section.
-The ideas should be complementary to the existing design document.
-Do not repeat existing ideas. Format your response as a bulleted list. Do not add any introductory or concluding remarks.
-`;
-
-        const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
+        const response = await withRetry<GenerateContentResponse>(() => ai!.models.generateContent({
+            model: MODEL_NAME,
+            contents: userContent,
             config: {
+                systemInstruction,
                 safetySettings,
             },
         }));
 
-        return response.text;
+        return response.text || "";
     } catch (error) {
         console.error(`Error brainstorming for ${section}:`, error);
         throw new Error(`Failed to brainstorm ideas for ${section}.`);
@@ -269,28 +266,28 @@ export const generateScene = async (
             godot: "e.g., [GODOT_SIGNAL: emit_signal('player_spoke')], [ANIMATION_PLAYER: play('character_wave')]"
         };
 
-        const fullPrompt = `You are a professional game scriptwriter creating a script for a game made in the ${gameEngine} engine.
-Your task is to write a script for a single scene based on the concepts provided. Format the output like a professional screenplay. Include scene descriptions, character actions, and dialogue. Where appropriate, include engine-specific cues for implementation (${engineSpecificCues[gameEngine]}).
+        const systemInstruction = `You are a professional game scriptwriter creating a script for a game made in the ${gameEngine} engine.
+Your task is to write a script for a single scene based on the concepts provided. Format the output like a professional screenplay. Include scene descriptions, character actions, and dialogue. Where appropriate, include engine-specific cues for implementation (${engineSpecificCues[gameEngine]}).`;
 
---- GAME DESIGN FRAMEWORK (for context) ---
+        const userContent = `--- GAME DESIGN FRAMEWORK (for context) ---
 ${frameworkContext || 'No design framework provided.'}
 
 --- SCENE CONCEPTS ---
 ${sceneConcepts}
----
 
-NOW, WRITE THE SCRIPT FOR THIS SCENE ONLY. Do not add introductory or concluding remarks.
-`;
+---
+NOW, WRITE THE SCRIPT FOR THIS SCENE ONLY. Do not add introductory or concluding remarks.`;
         
-        const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: fullPrompt,
+        const response = await withRetry<GenerateContentResponse>(() => ai!.models.generateContent({
+            model: MODEL_NAME,
+            contents: userContent,
             config: {
+                systemInstruction,
                 safetySettings,
             },
         }));
 
-        return response.text;
+        return response.text || "";
     } catch (error) {
         console.error("Error generating scene:", error);
         throw new Error("Failed to generate the scene.");
@@ -324,10 +321,10 @@ export const generateScriptSection = async (
             godot: "e.g., [GODOT_SIGNAL: emit_signal('player_spoke')], [ANIMATION_PLAYER: play('character_wave')]"
         };
 
-        const fullPrompt = `You are a professional game scriptwriter creating a script for a game made in the ${gameEngine} engine.
-Your task is to write a script for ONE specific section of the story outline. Format the output like a professional screenplay. Include scene descriptions, character actions, and dialogue. Where appropriate, include engine-specific cues for implementation (${engineSpecificCues[gameEngine]}).
+        const systemInstruction = `You are a professional game scriptwriter creating a script for a game made in the ${gameEngine} engine.
+Your task is to write a script for ONE specific section of the story outline. Format the output like a professional screenplay. Include scene descriptions, character actions, and dialogue. Where appropriate, include engine-specific cues for implementation (${engineSpecificCues[gameEngine]}).`;
 
---- FULL STORY OUTLINE (for context) ---
+        const userContent = `--- FULL STORY OUTLINE (for context) ---
 ${fullOutlineText}
 
 --- CURRENT SECTION TO WRITE (Section ${currentSectionIndex + 1}) ---
@@ -338,20 +335,20 @@ ${characterProfiles.length > 0 ? characterProfiles : 'No characters provided.'}
 
 --- GAME DESIGN FRAMEWORK (for context) ---
 ${frameworkContext || 'No design framework provided.'}
+
 ---
+NOW, WRITE THE SCRIPT FOR THE SPECIFIED SECTION ONLY. Do not write the entire script. Do not add introductory or concluding remarks.`;
 
-NOW, WRITE THE SCRIPT FOR THE SPECIFIED SECTION ONLY. Do not write the entire script. Do not add introductory or concluding remarks.
-`;
-
-        const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: fullPrompt,
+        const response = await withRetry<GenerateContentResponse>(() => ai!.models.generateContent({
+            model: MODEL_NAME,
+            contents: userContent,
             config: {
+                systemInstruction,
                 safetySettings,
             },
         }));
         
-        return response.text;
+        return response.text || "";
     } catch (error) {
         console.error("Error generating script section:", error);
         throw new Error("Failed to generate the script section.");
