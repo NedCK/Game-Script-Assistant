@@ -1,3 +1,4 @@
+
 export interface Character {
   id: string;
   name: string;
@@ -18,10 +19,20 @@ export interface PlotPoint {
 
 export type GameEngine = 'unity' | 'unreal' | 'godot';
 
+export type WorldConceptCategory = 'Location' | 'Faction' | 'Item' | 'Lore' | 'History' | 'Other';
+
+export interface WorldConcept {
+  id: string;
+  name: string;
+  category: WorldConceptCategory;
+  description: string;
+}
+
 export interface SavedProject {
   version: number;
   projectName: string;
   characters: Character[];
+  worldConcepts: WorldConcept[];
   plotPoints: PlotPoint[];
   gameEngine: GameEngine;
   language: 'en' | 'zh';
@@ -30,7 +41,6 @@ export interface SavedProject {
 
 export type SaveStatus = 'saved' | 'unsaved' | 'saving';
 
-// FIX: Add missing type definitions.
 export interface OutlineItem {
   id: number;
   description: string;

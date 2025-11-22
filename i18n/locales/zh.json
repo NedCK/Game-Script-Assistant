@@ -1,3 +1,4 @@
+
 {
   "characterRosterTitle": "角色管理器",
   "characterRosterPlaceholder": "尚未创建任何角色。",
@@ -47,6 +48,19 @@
   "projectManagerTitle": "项目详情",
   "projectManagerSubtitle": "为您的项目命名。",
   "projectManagerPlaceholder": "例如：'时空回响'",
+
+  "worldManagerTitle": "世界观概念管理",
+  "worldConceptsPlaceholder": "添加地点、派系、物品或传说设定。",
+  "conceptNamePlaceholder": "名称 (例如：水晶尖塔)",
+  "conceptDescPlaceholder": "描述 (或点击 AI 生成)",
+  "addConceptButton": "添加概念",
+  "confirmConceptDelete": "确定删除此概念吗？",
+  "conceptCategoryLocation": "地点",
+  "conceptCategoryFaction": "派系",
+  "conceptCategoryItem": "物品",
+  "conceptCategoryLore": "传说",
+  "conceptCategoryHistory": "历史",
+  "conceptCategoryOther": "其他",
   
   "saveProjectButton": "保存项目",
   "loadProjectButton": "加载项目",

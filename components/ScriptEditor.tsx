@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { PlotPoint, Character, GameEngine } from '../types';
+import { PlotPoint, Character, GameEngine, WorldConcept } from '../types';
 import { useI18n } from '../i18n/I18nProvider';
 import { PlotPointCard } from './PlotPointCard';
 import { PlotPointEditor } from './PlotPointEditor';
@@ -8,12 +9,13 @@ interface StoryboardProps {
   plotPoints: PlotPoint[];
   onPlotPointsChange: (points: PlotPoint[]) => void;
   characters: Character[];
+  worldConcepts: WorldConcept[];
   gameEngine: GameEngine;
 }
 
 const PlusIcon = (props: React.SVGProps<SVGSVGElement>) => (<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>);
 
-export const Storyboard: React.FC<StoryboardProps> = ({ plotPoints, onPlotPointsChange, characters, gameEngine }) => {
+export const Storyboard: React.FC<StoryboardProps> = ({ plotPoints, onPlotPointsChange, characters, worldConcepts, gameEngine }) => {
   const { t } = useI18n();
   const [editingPoint, setEditingPoint] = useState<PlotPoint | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -89,6 +91,7 @@ export const Storyboard: React.FC<StoryboardProps> = ({ plotPoints, onPlotPoints
         <PlotPointEditor
           point={editingPoint}
           allCharacters={characters}
+          worldConcepts={worldConcepts}
           gameEngine={gameEngine}
           onSave={handleSavePlotPoint}
           onDelete={handleDeletePlotPoint}

@@ -1,3 +1,4 @@
+
 {
   "characterRosterTitle": "Character Manager",
   "characterRosterPlaceholder": "No characters created yet.",
@@ -48,6 +49,19 @@
   "projectManagerSubtitle": "Give your project a name.",
   "projectManagerPlaceholder": "e.g., 'Chronoscape Echoes'",
   
+  "worldManagerTitle": "World Concepts",
+  "worldConceptsPlaceholder": "Add locations, factions, items, or lore to build your world.",
+  "conceptNamePlaceholder": "Name (e.g., Crystal Spire)",
+  "conceptDescPlaceholder": "Description (or click AI to generate)",
+  "addConceptButton": "Add Concept",
+  "confirmConceptDelete": "Delete this world concept?",
+  "conceptCategoryLocation": "Location",
+  "conceptCategoryFaction": "Faction",
+  "conceptCategoryItem": "Item",
+  "conceptCategoryLore": "Lore",
+  "conceptCategoryHistory": "History",
+  "conceptCategoryOther": "Other",
+
   "saveProjectButton": "Save Project",
   "loadProjectButton": "Load Project",
   "newProjectButton": "New Project",

@@ -1,10 +1,12 @@
+
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Header } from './components/Header';
 import { SettingsModal } from './components/SettingsModal';
 import { ProjectManager } from './components/ProjectManager';
 import { I18nProvider } from './i18n/I18nProvider';
-import { Character, GameEngine, SavedProject, SaveStatus, PlotPoint } from './types';
+import { Character, GameEngine, SavedProject, SaveStatus, PlotPoint, WorldConcept } from './types';
 import { CharacterManager } from './components/CharacterList';
+import { WorldConceptManager } from './components/WorldConceptManager';
 import { Storyboard } from './components/ScriptEditor';
 import { initializeAi } from './services/geminiService';
 
@@ -12,6 +14,7 @@ const getInitialState = (): SavedProject => ({
   version: 3,
   projectName: 'My Awesome Game',
   characters: [],
+  worldConcepts: [],
   plotPoints: [],
   gameEngine: 'unity',
   language: 'en',
@@ -23,6 +26,7 @@ const LOCAL_STORAGE_KEY = 'gameScriptProject_v3';
 
 function App() {
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [worldConcepts, setWorldConcepts] = useState<WorldConcept[]>([]);
   const [plotPoints, setPlotPoints] = useState<PlotPoint[]>([]);
   const [gameEngine, setGameEngine] = useState<GameEngine>('unity');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -44,6 +48,7 @@ function App() {
 
       setProjectName(data.projectName);
       setCharacters(data.characters || []);
+      setWorldConcepts(data.worldConcepts || []);
       setPlotPoints(data.plotPoints || []);
       setGameEngine(data.gameEngine || 'unity');
       setLanguage(data.language || 'en');
@@ -78,6 +83,7 @@ function App() {
             version: APP_VERSION,
             projectName,
             characters,
+            worldConcepts,
             plotPoints,
             gameEngine,
             language,
@@ -93,7 +99,7 @@ function App() {
     }, 1500);
 
     return () => clearTimeout(handler);
-  }, [projectName, characters, plotPoints, gameEngine, language, apiKey]);
+  }, [projectName, characters, worldConcepts, plotPoints, gameEngine, language, apiKey]);
 
   useEffect(() => {
     initializeAi(apiKey);
@@ -104,6 +110,7 @@ function App() {
       version: APP_VERSION,
       projectName,
       characters,
+      worldConcepts,
       plotPoints,
       gameEngine,
       language,
@@ -122,7 +129,7 @@ function App() {
     
     localStorage.setItem(LOCAL_STORAGE_KEY, jsonString);
     setSaveStatus('saved');
-  }, [projectName, characters, plotPoints, gameEngine, language, apiKey]);
+  }, [projectName, characters, worldConcepts, plotPoints, gameEngine, language, apiKey]);
 
   const handleLoadProjectTrigger = () => {
     fileInputRef.current?.click();
@@ -188,9 +195,14 @@ function App() {
             
             <div className="lg:col-span-1 flex flex-col gap-6 h-full">
               <ProjectManager projectName={projectName} onProjectNameChange={setProjectName} />
+              <WorldConceptManager
+                concepts={worldConcepts}
+                onConceptsChange={setWorldConcepts}
+              />
               <CharacterManager 
                 characters={characters} 
-                onCharactersChange={setCharacters} 
+                onCharactersChange={setCharacters}
+                worldConcepts={worldConcepts} 
               />
             </div>
 
@@ -199,6 +211,7 @@ function App() {
                 plotPoints={plotPoints}
                 onPlotPointsChange={setPlotPoints}
                 characters={characters}
+                worldConcepts={worldConcepts}
                 gameEngine={gameEngine}
               />
             </div>

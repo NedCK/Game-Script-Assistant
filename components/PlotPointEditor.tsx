@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { PlotPoint, Character, GameEngine } from '../types';
+import { PlotPoint, Character, GameEngine, WorldConcept } from '../types';
 import { useI18n } from '../i18n/I18nProvider';
 import { generateScriptForPlotPoint } from '../services/geminiService';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -7,6 +8,7 @@ import { LoadingSpinner } from './LoadingSpinner';
 interface PlotPointEditorProps {
   point: PlotPoint;
   allCharacters: Character[];
+  worldConcepts: WorldConcept[];
   gameEngine: GameEngine;
   onSave: (point: PlotPoint) => void;
   onDelete: (id: string) => void;
@@ -16,7 +18,7 @@ interface PlotPointEditorProps {
 
 const XMarkIcon = (props: React.SVGProps<SVGSVGElement>) => (<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>);
 
-export const PlotPointEditor: React.FC<PlotPointEditorProps> = ({ point, allCharacters, gameEngine, onSave, onDelete, onCancel, isNew }) => {
+export const PlotPointEditor: React.FC<PlotPointEditorProps> = ({ point, allCharacters, worldConcepts, gameEngine, onSave, onDelete, onCancel, isNew }) => {
   const { t } = useI18n();
   const [editedPoint, setEditedPoint] = useState<PlotPoint>(point);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -46,7 +48,7 @@ export const PlotPointEditor: React.FC<PlotPointEditorProps> = ({ point, allChar
     setError(null);
     try {
       const charactersInScene = allCharacters.filter(c => editedPoint.characters.includes(c.id));
-      const generatedScript = await generateScriptForPlotPoint(editedPoint, charactersInScene, gameEngine);
+      const generatedScript = await generateScriptForPlotPoint(editedPoint, charactersInScene, gameEngine, worldConcepts);
       setEditedPoint(p => ({ ...p, script: generatedScript }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');

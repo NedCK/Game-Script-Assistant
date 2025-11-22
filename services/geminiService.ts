@@ -1,9 +1,14 @@
+
 import { GoogleGenAI, Type, GenerateContentResponse, HarmCategory, HarmBlockThreshold } from "@google/genai";
-import { Character, GameEngine, PlotPoint, FrameworkInputs } from '../types';
+import { Character, GameEngine, PlotPoint, FrameworkInputs, WorldConcept } from '../types';
 
 let ai: GoogleGenAI | null = null;
 
-const MODEL_NAME = "gemini-3-pro-preview";
+// Hybrid Model Strategy:
+// Use 2.5 Flash for structured JSON tasks, brainstorming, and world building (faster).
+// Use 3.0 Pro Preview for creative script writing (higher quality prose).
+const FAST_MODEL = "gemini-2.5-flash";
+const CREATIVE_MODEL = "gemini-3-pro-preview";
 
 export const initializeAi = (apiKey?: string) => {
   const finalApiKey = apiKey || process.env.API_KEY;
@@ -12,15 +17,16 @@ export const initializeAi = (apiKey?: string) => {
     ai = null;
     return;
   }
+  // Ensure we create a new instance to pick up the key.
   ai = new GoogleGenAI({ apiKey: finalApiKey });
-  console.log(`Gemini AI client initialized with model: ${MODEL_NAME}`);
+  console.log(`Gemini AI client initialized.`);
 };
 
 // Initialize with default on module load
 initializeAi(process.env.API_KEY);
 
 
-const withRetry = async <T>(apiCall: () => Promise<T>, maxRetries = 4, initialDelay = 1500): Promise<T> => {
+const withRetry = async <T>(apiCall: () => Promise<T>, maxRetries = 3, initialDelay = 1000): Promise<T> => {
     if (!ai) {
       throw new Error("AI Client not initialized. Please set an API key in the settings.");
     }
@@ -34,7 +40,6 @@ const withRetry = async <T>(apiCall: () => Promise<T>, maxRetries = 4, initialDe
             
             if (i < maxRetries - 1) {
                 const delay = initialDelay * Math.pow(2, i) + (Math.random() * 1000);
-                console.log(`Retrying in ${Math.round(delay)}ms...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
@@ -73,31 +78,39 @@ const characterListSchema = {
   required: ['characters']
 };
 
-export const generateCharacters = async (prompts: string[], existingCharacters: Character[]): Promise<Omit<Character, 'id'>[]> => {
+export const generateCharacters = async (prompts: string[], existingCharacters: Character[], worldConcepts: WorldConcept[] = []): Promise<Omit<Character, 'id'>[]> => {
   if (!ai) throw new Error("AI Client not initialized. Please set an API key in the settings.");
   if (prompts.length === 0) return [];
   try {
     const characterConcepts = prompts.map((p, i) => `Concept ${i + 1}: ${p}`).join('\n');
     const existingNames = existingCharacters.map(c => c.name).join(', ') || 'None so far.';
+    
+    const worldContext = worldConcepts.length > 0 
+        ? worldConcepts.map(w => `[${w.category}] ${w.name}: ${w.description}`).join('\n')
+        : "No specific world concepts defined yet.";
 
     const systemInstruction = `You are an expert narrative designer for video games.
 Based on a list of raw character concepts, your task is to refine them into CONCISE character profiles suitable for script generation.
+Ensure the characters fit into the provided Game World Concepts.
+
 For each character, you MUST ONLY provide these four things:
 1. name: Their name.
 2. appearance: A brief description of their physical appearance.
-3. backstory: A brief background story.
-4. relationships: A description of their relationships with the OTHER characters being generated in this batch, and optionally with existing characters.
+3. backstory: A brief background story that integrates with the world concepts where possible.
+4. relationships: A description of their relationships with the OTHER characters being generated in this batch, and optionally with existing characters.`;
 
-Do NOT include personality traits or motivations as separate fields.`;
+    const userContent = `--- GAME WORLD CONCEPTS ---
+${worldContext}
 
-    const userContent = `--- EXISTING CHARACTERS IN THE STORY (for context) ---
+--- EXISTING CHARACTERS (for context) ---
 ${existingNames}
 
 --- RAW CHARACTER CONCEPTS TO GENERATE ---
 ${characterConcepts}`;
     
+    // Use FAST_MODEL for JSON generation tasks for better stability
     const response = await withRetry<GenerateContentResponse>(() => ai!.models.generateContent({
-      model: MODEL_NAME,
+      model: FAST_MODEL, 
       contents: userContent,
       config: {
         systemInstruction,
@@ -110,6 +123,7 @@ ${characterConcepts}`;
     const textResponse = response.text?.trim();
     if (!textResponse) throw new Error('API returned an empty response.');
     
+    // Clean up potential markdown code blocks if model includes them
     const jsonString = textResponse.replace(/^```json\s*/, '').replace(/```$/, '');
     const parsedData = JSON.parse(jsonString);
 
@@ -120,24 +134,58 @@ ${characterConcepts}`;
 
   } catch (error) {
     console.error("Error generating character:", error);
-     if (error instanceof SyntaxError) {
-      console.error("Failed to parse JSON response from AI:", error);
+    if (error instanceof SyntaxError) {
       throw new Error("Failed to generate character profile. The AI returned an invalid format.");
     }
-    throw new Error("Failed to generate character profile. Please check the console for details.");
+    throw error;
   }
+};
+
+export const generateConceptDescription = async (name: string, category: string, existingConcepts: WorldConcept[]): Promise<string> => {
+    if (!ai) throw new Error("AI Client not initialized.");
+    try {
+        const existingContext = existingConcepts.map(w => `[${w.category}] ${w.name}: ${w.description}`).join('\n');
+        
+        const systemInstruction = `You are a creative world-builder for a video game.
+Your task is to write a concise, 1-2 sentence description for a new world concept based on its name and category.
+Ensure it fits with the existing world context.`;
+
+        const userContent = `--- EXISTING WORLD CONCEPTS ---
+${existingContext || 'None.'}
+
+--- NEW CONCEPT TO DEFINE ---
+Name: ${name}
+Category: ${category}
+
+Write a short, evocative description:`;
+
+        const response = await withRetry<GenerateContentResponse>(() => ai!.models.generateContent({
+            model: FAST_MODEL,
+            contents: userContent,
+            config: { systemInstruction, safetySettings },
+        }));
+        return response.text?.trim() || "";
+    } catch (error) {
+        console.error("Error generating concept:", error);
+        throw error;
+    }
 };
 
 export const generateScriptForPlotPoint = async (
     plotPoint: Omit<PlotPoint, 'script' | 'id'>,
     charactersInScene: Character[], 
-    gameEngine: GameEngine
+    gameEngine: GameEngine,
+    worldConcepts: WorldConcept[] = []
 ): Promise<string> => {
     if (!ai) throw new Error("AI Client not initialized. Please set an API key in the settings.");
     try {
         const characterProfiles = charactersInScene.map(c => 
             `Name: ${c.name}\nAppearance: ${c.appearance}\nBackstory: ${c.backstory}\nRelationships: ${c.relationships}`
         ).join('\n\n');
+
+        const worldContext = worldConcepts.length > 0 
+            ? worldConcepts.map(w => `[${w.category}] ${w.name}: ${w.description}`).join('\n')
+            : "No specific world concepts defined.";
 
         const engineSpecificCues = {
             unity: "e.g., [UNITY_EVENT: PlaySound('footsteps_metal')], [ANIMATION: Player.Trigger('sigh')]",
@@ -146,9 +194,14 @@ export const generateScriptForPlotPoint = async (
         }
 
         const systemInstruction = `You are a professional game scriptwriter creating a script for a game made in the ${gameEngine} engine.
-Your task is to write a script for a single scene based on the details provided. Format the output like a professional screenplay. Include scene descriptions, character actions, and dialogue. Where appropriate, include engine-specific cues for implementation (${engineSpecificCues[gameEngine]}).`;
+Your task is to write a script for a single scene.
+Integrate the provided World Concepts (locations, lore, factions) naturally into the dialogue and scene descriptions where appropriate.
+Format the output like a professional screenplay. Include scene descriptions, character actions, and dialogue. Where appropriate, include engine-specific cues for implementation (${engineSpecificCues[gameEngine]}).`;
 
-        const userContent = `--- SCENE DETAILS ---
+        const userContent = `--- GAME WORLD CONCEPTS ---
+${worldContext}
+
+--- SCENE DETAILS ---
 Title: ${plotPoint.title}
 Setting: ${plotPoint.setting}
 Mood: ${plotPoint.mood}
@@ -160,8 +213,9 @@ ${characterProfiles.length > 0 ? characterProfiles : 'No specific characters pro
 ---
 NOW, WRITE THE SCRIPT FOR THIS SCENE ONLY. Do not add introductory or concluding remarks.`;
 
+        // Use CREATIVE_MODEL for script writing
         const response = await withRetry<GenerateContentResponse>(() => ai!.models.generateContent({
-            model: MODEL_NAME,
+            model: CREATIVE_MODEL,
             contents: userContent,
             config: {
                 systemInstruction,
@@ -191,8 +245,9 @@ export const translateToChinese = async (textToTranslate: string): Promise<strin
 ${textToTranslate}
 --- END OF TEXT ---`;
 
+    // Use FAST_MODEL for translation tasks
     const response = await withRetry<GenerateContentResponse>(() => ai!.models.generateContent({
-      model: MODEL_NAME,
+      model: FAST_MODEL,
       contents: userContent,
       config: {
         systemInstruction,
@@ -230,8 +285,9 @@ ${currentValue || 'No ideas yet.'}
 --- OTHER DESIGN DOCUMENT SECTIONS (for context) ---
 ${context || 'No other context provided.'}`;
 
+        // Use FAST_MODEL for brainstorming to ensure quick UI response
         const response = await withRetry<GenerateContentResponse>(() => ai!.models.generateContent({
-            model: MODEL_NAME,
+            model: FAST_MODEL,
             contents: userContent,
             config: {
                 systemInstruction,
@@ -278,8 +334,9 @@ ${sceneConcepts}
 ---
 NOW, WRITE THE SCRIPT FOR THIS SCENE ONLY. Do not add introductory or concluding remarks.`;
         
+        // Use CREATIVE_MODEL for script writing
         const response = await withRetry<GenerateContentResponse>(() => ai!.models.generateContent({
-            model: MODEL_NAME,
+            model: CREATIVE_MODEL,
             contents: userContent,
             config: {
                 systemInstruction,
@@ -339,8 +396,9 @@ ${frameworkContext || 'No design framework provided.'}
 ---
 NOW, WRITE THE SCRIPT FOR THE SPECIFIED SECTION ONLY. Do not write the entire script. Do not add introductory or concluding remarks.`;
 
+        // Use CREATIVE_MODEL for script writing
         const response = await withRetry<GenerateContentResponse>(() => ai!.models.generateContent({
-            model: MODEL_NAME,
+            model: CREATIVE_MODEL,
             contents: userContent,
             config: {
                 systemInstruction,
